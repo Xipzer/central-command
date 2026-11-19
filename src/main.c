@@ -110,6 +110,22 @@ static void setDword(LPCWSTR name, DWORD v) {
     RegSetKeyValueW(HKEY_CURRENT_USER, APP_KEY, name, REG_DWORD, &v, sizeof(v));
 }
 
+// Central Command grew out of Blackout. The first time it starts, Blackout's settings become its own (fan curve and
+// override, GPU profile and XBAR, wake rules), once: after that the two keys go their own ways.
+static void carryOver(void) {
+    HKEY from, to;
+    if (RegOpenKeyExW(HKEY_CURRENT_USER, APP_KEY, 0, KEY_READ, &to) == ERROR_SUCCESS) {
+        RegCloseKey(to);
+        return;
+    }
+    if (RegOpenKeyExW(HKEY_CURRENT_USER, L"Software\\Blackout", 0, KEY_READ, &from) != ERROR_SUCCESS) return;
+    if (RegCreateKeyExW(HKEY_CURRENT_USER, APP_KEY, 0, NULL, 0, KEY_WRITE, NULL, &to, NULL) == ERROR_SUCCESS) {
+        RegCopyTreeW(from, NULL, to);
+        RegCloseKey(to);
+    }
+    RegCloseKey(from);
+}
+
 static BOOL isElevated(void) {
     HANDLE t;
     TOKEN_ELEVATION e = {0};
@@ -1561,6 +1577,7 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE hp, LPWSTR cmd, int show) {
     if (wcsstr(cmd, L"--gpu-")) return gpuCommand(cmd);
     HANDLE mutex = CreateMutexW(NULL, TRUE, L"Local\\CentralCommand");
     if (GetLastError() == ERROR_ALREADY_EXISTS) return 0;
+    carryOver();
 
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
     HINSTANCE inst = GetModuleHandleW(NULL);
