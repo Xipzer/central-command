@@ -1286,13 +1286,14 @@ static void showMenu(HWND hwnd) {
 
 // Wake log. While the screens are off, raw input is watched so the device behind a wake can be named. The handler
 // only stores a handle and a tick; the name is looked up once, when the screens come on.
-// Whole usage pages, not only mouse and keyboard: Windows also turns the screens on for other HID input (media keys,
-// a controller, a monitor's own control interface), and those wakes used to be logged as "No input".
+// Named usages only, never a whole usage page: registering makes Windows read the device, and then every report it
+// sends counts as user input. A motherboard LED controller (generic desktop page, usage 0) answers each lighting
+// command with a report, so watching its page turned "RGB off with the screens" into an instant wake.
 static void wakeWatch(HWND hwnd, BOOL on) {
-    static const USHORT pages[3] = {0x01, 0x0C, 0x80}; // generic desktop, consumer control, monitor
-    RAWINPUTDEVICE rid[3];
-    for (int i = 0; i < 3; i++) rid[i] = (RAWINPUTDEVICE){pages[i], 0, RIDEV_PAGEONLY | (on ? RIDEV_INPUTSINK : RIDEV_REMOVE), on ? hwnd : NULL};
-    RegisterRawInputDevices(rid, 3, sizeof(*rid));
+    static const USHORT use[6][2] = {{1, 2}, {1, 6}, {1, 4}, {1, 5}, {1, 0x80}, {0x0C, 1}}; // mouse, keyboard, joystick, gamepad, system control, consumer control
+    RAWINPUTDEVICE rid[6];
+    for (int i = 0; i < 6; i++) rid[i] = (RAWINPUTDEVICE){use[i][0], use[i][1], on ? RIDEV_INPUTSINK : RIDEV_REMOVE, on ? hwnd : NULL};
+    RegisterRawInputDevices(rid, 6, sizeof(*rid));
     if (on) rawDevice = NULL, rawTick = 0, hotkeyCause = 0;
 }
 
@@ -1543,7 +1544,9 @@ static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                     screensOn = state == 1;
                     if (screensOn) hotkeyDisarm();
                     else hotkeyArm();
-                    if (hasRgb && getDword(L"Sync", 1)) setRgb(hwnd, screensOn && litWant);
+                    // Only when the lights have to change: a lighting command to devices that are already dark still makes
+                    // them answer, and an answer that Windows reads as input turns the screens straight back on.
+                    if (hasRgb && getDword(L"Sync", 1) && (screensOn && litWant) != litOn) setRgb(hwnd, screensOn && litWant);
                     applyFans();
                 }
             }
