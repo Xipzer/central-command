@@ -113,17 +113,18 @@ static void setDword(LPCWSTR name, DWORD v) {
 // Central Command grew out of Blackout. The first time it starts, Blackout's settings become its own (fan curve and
 // override, GPU profile and XBAR, wake rules), once: after that the two keys go their own ways.
 static void carryOver(void) {
+    // Marked by a value, not by the key existing: a command line mode or a preview may have created the key already.
     HKEY from, to;
-    if (RegOpenKeyExW(HKEY_CURRENT_USER, APP_KEY, 0, KEY_READ, &to) == ERROR_SUCCESS) {
-        RegCloseKey(to);
-        return;
+    DWORD done = 0, size = sizeof(done), one = 1;
+    if (RegCreateKeyExW(HKEY_CURRENT_USER, APP_KEY, 0, NULL, 0, KEY_READ | KEY_WRITE, NULL, &to, NULL) != ERROR_SUCCESS) return;
+    if (RegQueryValueExW(to, L"CarriedOver", NULL, NULL, (BYTE *)&done, &size) != ERROR_SUCCESS || !done) {
+        if (RegOpenKeyExW(HKEY_CURRENT_USER, L"Software\\Blackout", 0, KEY_READ, &from) == ERROR_SUCCESS) {
+            RegCopyTreeW(from, NULL, to);
+            RegCloseKey(from);
+        }
+        RegSetValueExW(to, L"CarriedOver", 0, REG_DWORD, (BYTE *)&one, sizeof(one));
     }
-    if (RegOpenKeyExW(HKEY_CURRENT_USER, L"Software\\Blackout", 0, KEY_READ, &from) != ERROR_SUCCESS) return;
-    if (RegCreateKeyExW(HKEY_CURRENT_USER, APP_KEY, 0, NULL, 0, KEY_WRITE, NULL, &to, NULL) == ERROR_SUCCESS) {
-        RegCopyTreeW(from, NULL, to);
-        RegCloseKey(to);
-    }
-    RegCloseKey(from);
+    RegCloseKey(to);
 }
 
 static BOOL isElevated(void) {
