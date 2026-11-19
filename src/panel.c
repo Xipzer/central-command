@@ -390,11 +390,12 @@ static void paintHeader(float x, float y, float w) {
     if (view == V_MAIN) {
         mark(x + 9, y + 16, 9);
         text(L"Central Command", F_BRAND, rc(x + 26, y + 5, 150, 22), ink(), 1, DWRITE_TEXT_ALIGNMENT_LEADING);
-        hit[H_SCREENS] = rc(x + w - 128, y, 128, 32);
+        // The pill hugs its content: 16 px on each side of the icon and label, so nothing looks cut short.
+        hit[H_SCREENS] = rc(x + w - 116, y, 116, 32);
         fillRound(hit[H_SCREENS], 16, ACCENT, hover == H_SCREENS ? 0.85f : 1);
-        powerIcon(x + w - 110, y + 17, 0xFFFFFF);
-        text(L"Screens off", F_BOLD, rc(x + w - 98, y + 7, 92, 18), 0xFFFFFF, 1, DWRITE_TEXT_ALIGNMENT_LEADING);
-        hit[H_GEAR] = rc(x + w - 128 - 8 - 32, y, 32, 32);
+        powerIcon(x + w - 94, y + 17, 0xFFFFFF);
+        text(L"Screens off", F_BOLD, rc(x + w - 82, y + 7, 70, 18), 0xFFFFFF, 1, DWRITE_TEXT_ALIGNMENT_LEADING);
+        hit[H_GEAR] = rc(x + w - 116 - 8 - 32, y, 32, 32);
         if (hover == H_GEAR) dot(hit[H_GEAR].left + 16, y + 16, 16, tone(), 0.10f);
         gear(hit[H_GEAR].left + 16, y + 16, hover == H_GEAR ? ink() : dim());
     } else {
