@@ -206,27 +206,13 @@ static void arc(float x0, float y0, float x1, float y1, float r, BOOL large, UIN
 
 // ---- Icons ----
 
-// Crescent as a real shape (disc minus disc), so it sits cleanly on the translucent background.
-static void moon(float x, float y, float r) {
-    D2D1_ELLIPSE outer = {{x, y}, r, r}, cut = {{x + r * 0.55f, y - r * 0.1f}, r * 0.8f, r * 0.8f};
-    ID2D1EllipseGeometry *a, *b;
-    ID2D1PathGeometry *g;
-    ID2D1GeometrySink *sink;
-    if (ID2D1Factory_CreateEllipseGeometry(d2f, &outer, &a) != S_OK) return;
-    if (ID2D1Factory_CreateEllipseGeometry(d2f, &cut, &b) == S_OK) {
-        if (ID2D1Factory_CreatePathGeometry(d2f, &g) == S_OK) {
-            if (ID2D1PathGeometry_Open(g, &sink) == S_OK) {
-                ID2D1EllipseGeometry_CombineWithGeometry(a, (ID2D1Geometry *)b, D2D1_COMBINE_MODE_EXCLUDE, NULL, 0.05f, (ID2D1SimplifiedGeometrySink *)sink);
-                ID2D1GeometrySink_Close(sink);
-                ID2D1GeometrySink_Release(sink);
-                paint(ink(), 1);
-                ID2D1RenderTarget_FillGeometry(rt, (ID2D1Geometry *)g, (ID2D1Brush *)brush, NULL);
-            }
-            ID2D1PathGeometry_Release(g);
-        }
-        ID2D1EllipseGeometry_Release(b);
-    }
-    ID2D1EllipseGeometry_Release(a);
+// The mark: a C around a centre point. Ring, gap and centre are each a third of the radius, as in the tray icon
+// (tools/make_icon.py). Stroked like the other icons but heavier, so it reads as the logo and not as a control.
+static void mark(float x, float y, float r) {
+    float w = r / 3, m = r - w / 2, k = 0.7071f * m;
+    arc(x + k, y + k, x + k, y - k, m, TRUE, ink(), w);
+    dot(x + k, y + k, w / 2, ink(), 1), dot(x + k, y - k, w / 2, ink(), 1); // round ends
+    dot(x, y, w, ink(), 1);
 }
 static void powerIcon(float cx, float cy, UINT rgb) {
     arc(cx + 3.3f, cy - 4.4f, cx - 3.3f, cy - 4.4f, 5.5f, TRUE, rgb, 2);
@@ -402,7 +388,7 @@ static LPCWSTR fanWhyText(void) {
 
 static void paintHeader(float x, float y, float w) {
     if (view == V_MAIN) {
-        moon(x + 9, y + 16, 9);
+        mark(x + 9, y + 16, 9);
         text(L"Central Command", F_BRAND, rc(x + 26, y + 5, 150, 22), ink(), 1, DWRITE_TEXT_ALIGNMENT_LEADING);
         hit[H_SCREENS] = rc(x + w - 128, y, 128, 32);
         fillRound(hit[H_SCREENS], 16, ACCENT, hover == H_SCREENS ? 0.85f : 1);

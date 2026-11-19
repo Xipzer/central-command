@@ -1374,6 +1374,19 @@ static void hotkeyWake(void) {
 
 #include "panel.c"
 
+// The tray icon is white on a dark taskbar (icon 1) and dark on a light one (icon 2). Loaded at startup and again
+// when Windows says its colours changed.
+static void trayIcon(void) {
+    HICON old = nid.hIcon;
+    int px = GetSystemMetricsForDpi(SM_CXSMICON, GetDpiForSystem());
+    BOOL light = getDwordAt(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize", L"SystemUsesLightTheme", 0);
+    nid.hIcon = LoadImageW(GetModuleHandleW(NULL), MAKEINTRESOURCEW(light ? 2 : 1), IMAGE_ICON, px, px, 0);
+    if (old) {
+        Shell_NotifyIconW(NIM_MODIFY, &nid);
+        DestroyIcon(old);
+    }
+}
+
 static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     switch (msg) {
     case WM_TRAY:
@@ -1531,6 +1544,9 @@ static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             }
         }
         return TRUE;
+    case WM_SETTINGCHANGE:
+        if (lp && !lstrcmpW((LPCWSTR)lp, L"ImmersiveColorSet")) trayIcon();
+        return 0;
     case WM_DISPLAYCHANGE:
         // Monitors re-enumerate a few seconds after waking; restore once they have settled.
         if (screensOn && savedCount) SetTimer(hwnd, TIMER_LAYOUT, 2500, NULL);
@@ -1596,8 +1612,7 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE hp, LPWSTR cmd, int show) {
     nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP | NIF_SHOWTIP;
     nid.uCallbackMessage = WM_TRAY;
     nid.uVersion = NOTIFYICON_VERSION_4;
-    int px = GetSystemMetricsForDpi(SM_CXSMICON, GetDpiForSystem());
-    nid.hIcon = LoadImageW(inst, MAKEINTRESOURCEW(1), IMAGE_ICON, px, px, 0);
+    trayIcon();
     lstrcpyW(nid.szTip, L"Central Command: click for screens off, right-click for the panel");
     // Started at logon, Central Command can be faster than the taskbar: then the icon is refused, and the taskbar's
     // "created" broadcast may already have gone. Try again every 2 s for a minute.
@@ -1619,6 +1634,7 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE hp, LPWSTR cmd, int show) {
     ChangeWindowMessageFilterEx(hwnd, WM_COMMAND, MSGFLT_ALLOW, NULL);
     ChangeWindowMessageFilterEx(hwnd, WM_TRAY, MSGFLT_ALLOW, NULL);
     ChangeWindowMessageFilterEx(hwnd, taskbarCreated, MSGFLT_ALLOW, NULL);
+    ChangeWindowMessageFilterEx(hwnd, WM_SETTINGCHANGE, MSGFLT_ALLOW, NULL);
     if (linkLeds || hasCurve) SetTimer(hwnd, TIMER_LINK, 1000, NULL);
     // The driver forgets a profile when it resets or the PC restarts: send it now, and again after every reset.
     if (hasGpu()) gpuWatch(hwnd), SetTimer(hwnd, TIMER_GPU, 10000, NULL);
