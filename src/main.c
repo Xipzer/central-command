@@ -1286,9 +1286,13 @@ static void showMenu(HWND hwnd) {
 
 // Wake log. While the screens are off, raw input is watched so the device behind a wake can be named. The handler
 // only stores a handle and a tick; the name is looked up once, when the screens come on.
+// Whole usage pages, not only mouse and keyboard: Windows also turns the screens on for other HID input (media keys,
+// a controller, a monitor's own control interface), and those wakes used to be logged as "No input".
 static void wakeWatch(HWND hwnd, BOOL on) {
-    RAWINPUTDEVICE rid[2] = {{1, 2, on ? RIDEV_INPUTSINK : RIDEV_REMOVE, on ? hwnd : NULL}, {1, 6, on ? RIDEV_INPUTSINK : RIDEV_REMOVE, on ? hwnd : NULL}};
-    RegisterRawInputDevices(rid, 2, sizeof(*rid));
+    static const USHORT pages[3] = {0x01, 0x0C, 0x80}; // generic desktop, consumer control, monitor
+    RAWINPUTDEVICE rid[3];
+    for (int i = 0; i < 3; i++) rid[i] = (RAWINPUTDEVICE){pages[i], 0, RIDEV_PAGEONLY | (on ? RIDEV_INPUTSINK : RIDEV_REMOVE), on ? hwnd : NULL};
+    RegisterRawInputDevices(rid, 3, sizeof(*rid));
     if (on) rawDevice = NULL, rawTick = 0, hotkeyCause = 0;
 }
 
