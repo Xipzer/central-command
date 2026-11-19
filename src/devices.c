@@ -1,8 +1,9 @@
 // Device definitions: small text files that describe a motherboard fan chip or a USB controller (docs/devices.md),
-// and the code that reads and drives the hardware from them. Included by blackout.c and by tools/devtest.c.
+// and the code that reads and drives the hardware from them. Included by main.c and by tools/devtest.c.
 //
 // Nothing in this file calls Windows. The includer supplies the host functions below, so the same code runs against
-// real hardware in blackout.exe and against a simulated chip in the test. Only the definitions in use stay in memory.
+// real hardware in central-command.exe and against a simulated chip in the test. Only the definitions in use stay in
+// memory.
 #include <string.h>
 
 #define DEV_ITEMS  16   // fans or temperatures in one definition
@@ -32,7 +33,7 @@ typedef struct {
     unsigned char mask, value, enableBit;
     unsigned char control, hasEnable, hasRpm;
     DevField field;
-    // While Blackout holds the fan: what the registers held before.
+    // While Central Command holds the fan: what the registers held before.
     unsigned char taken, savedMode, savedDuty, savedEnable;
     // HID stream: newest value and how many more reads it stays valid for.
     unsigned char fresh;
@@ -62,8 +63,8 @@ typedef struct {
     void *host;
 } Dev;
 
-// Used when blackout.ini still has channels= and no file in the devices folder matches the chip: the layout every
-// NCT679x shares, as Blackout drove it before definitions existed.
+// Used when central-command.ini still has channels= and no file in the devices folder matches the chip: the layout
+// every NCT679x shares, as it was driven before definitions existed.
 static const char devBuiltin[] =
     "[device]\nname=Nuvoton NCT679x\ntype=sio\nstatus=verified\nfamily=nuvoton\nchip=D4,D8\nldn=0B\niolock=1\n[fans]\n"
     "Fan 1=duty:109 mode:102 manual:F0=00 rpm:4C0\nFan 2=duty:209 mode:202 manual:F0=00 rpm:4C2\n"
@@ -431,7 +432,7 @@ static int devParse(Dev *d, char *text, const char *file) {
     return 1;
 }
 
-// A fan or temperature named in blackout.ini: its number from 1, or its name. -1 = not in this definition.
+// A fan or temperature named in central-command.ini: its number from 1, or its name. -1 = not in this definition.
 static int devFindFan(const Dev *d, const char *ref) {
     int n = dvDec(ref, DEV_ITEMS);
     if (n >= 1 && n <= d->fanCount) return n - 1;

@@ -1,12 +1,12 @@
 # Device definitions
 
-Blackout learns about fan hardware from small text files in the `devices` folder beside `blackout.exe`. One file describes one motherboard fan chip or one USB controller: where its fan and temperature registers are, or which bytes it understands. Supporting new hardware means adding a file, not changing the program.
+Central Command learns about fan hardware from small text files in the `devices` folder beside `central-command.exe`. One file describes one motherboard fan chip or one USB controller: where its fan and temperature registers are, or which bytes it understands. Supporting new hardware means adding a file, not changing the program.
 
-At startup Blackout reads the folder, keeps the definitions that `blackout.ini` uses, and forgets the rest. Hardware you don't use costs nothing while Blackout runs.
+At startup Central Command reads the folder, keeps the definitions that `central-command.ini` uses, and forgets the rest. Hardware you don't use costs nothing while Central Command runs.
 
 ## Using a definition
 
-Run `blackout.exe --devices` as admin. It writes what it finds to `%TEMP%\blackout-devices.txt` and opens it:
+Run `central-command.exe --devices` as admin. It writes what it finds to `%TEMP%\central-command-devices.txt` and opens it:
 
 ```
 Config port 2E: chip D42A at 2A0, Nuvoton NCT6796D-R (nuvoton-nct6796d-r.ini, verified)
@@ -15,7 +15,7 @@ Config port 2E: chip D42A at 2A0, Nuvoton NCT6796D-R (nuvoton-nct6796d-r.ini, ve
   temp  1  SYSTIN                 31.0 C
 ```
 
-Then name the fans to drive, and the temperature that drives them, in `blackout.ini`:
+Then name the fans to drive, and the temperature that drives them, in `central-command.ini`:
 
 ```ini
 [fans]
@@ -31,9 +31,9 @@ A definition is named by its file name without `.ini`, for example `corsair-comm
 
 ## Safety
 
-- `status=untested` means the file was written from documentation and other open source drivers and has not been run on that hardware. Blackout shows such a device in `--devices` but does not take control of its fans unless `untested=1` is set.
-- Before it takes a motherboard fan, Blackout saves the registers it is about to change. It puts them back on exit, sleep, shutdown, when the curve is switched off and when the temperature reading is lost for 20 s.
-- The saved values are also noted in the registry until shutdown (`HKLM\SOFTWARE\Blackout\Held`, volatile). If Blackout is killed while it holds a fan, the next start can still hand it back as the BIOS had it.
+- `status=untested` means the file was written from documentation and other open source drivers and has not been run on that hardware. Central Command shows such a device in `--devices` but does not take control of its fans unless `untested=1` is set.
+- Before it takes a motherboard fan, Central Command saves the registers it is about to change. It puts them back on exit, sleep, shutdown, when the curve is switched off and when the temperature reading is lost for 20 s.
+- The saved values are also noted in the registry until shutdown (`HKLM\SOFTWARE\CentralCommand\Held`, volatile). If Central Command is killed while it holds a fan, the next start can still hand it back as the BIOS had it.
 - A USB controller has no BIOS curve to return to, so its fans are set to 100% in those cases.
 - A chip is asked for its ID before anything is written to it. Fan chips that the BIOS leaves in config mode (the second chip on some Gigabyte boards) are left exactly so.
 - `guard=` lets a definition refuse control when the chip is not in the state its registers assume.
@@ -56,7 +56,7 @@ Registers and bytes are hexadecimal without a prefix. Counts, offsets, bit numbe
 
 ## type=sio (motherboard fan chips)
 
-Needs PawnIO and `LpcIO.bin`, and Blackout running as admin.
+Needs PawnIO and `LpcIO.bin`, and Central Command running as admin.
 
 ```ini
 [device]
@@ -84,8 +84,8 @@ CPUTIN=150,151.7
 |---|---|
 | `duty` | Register that takes the duty, 0 to FF |
 | `mode` | Register that selects automatic or manual control |
-| `manual` | To take the fan, Blackout writes `(old AND NOT mask) OR value` to `mode`. On hand-back the old value goes back whole |
-| `enable` | Optional. A bit that must be set while the fan is driven. Blackout sets it and puts it back |
+| `manual` | To take the fan, Central Command writes `(old AND NOT mask) OR value` to `mode`. On hand-back the old value goes back whole |
+| `enable` | Optional. A bit that must be set while the fan is driven. Central Command sets it and puts it back |
 | `rpm` | Where the speed is read. The family decides how |
 
 `duty`, `mode` and `manual` go together. A fan with only `rpm` is shown and never controlled.
@@ -101,7 +101,7 @@ A temperature is a signed 8-bit register in degrees C. The optional second part 
 
 Fintek and NCT668x chips need steps to take control that this format can't describe yet (a mode register shared by all fans, a request and commit sequence), so their definitions list `rpm` only.
 
-Blackout looks behind config port 2E, and behind 4E only when `blackout.ini` names something that is not on the first chip.
+Central Command looks behind config port 2E, and behind 4E only when `central-command.ini` names something that is not on the first chip.
 
 ## type=hid (USB controllers)
 
@@ -131,7 +131,7 @@ Commands are hexadecimal bytes and placeholders, up to 16: `{ch}` is the channel
 
 A reply field is `type@offset`, optionally followed by `/divisor`. Types: `u8`, `u16be`, `u16le`, `s16be`, `s16le`. The offset counts from the first byte of the report as Windows returns it, so byte 0 is the report ID. Drivers on other systems often count without it: add 1 to their offsets for a device that does not use report IDs.
 
-`in=` and `out=` are checked against the fields and commands in the file. When the device is opened, Blackout uses the report sizes Windows reports for it.
+`in=` and `out=` are checked against the fields and commands in the file. When the device is opened, Central Command uses the report sizes Windows reports for it.
 
 Controllers that send status reports on their own use `listen`:
 

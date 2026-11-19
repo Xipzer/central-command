@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Render every panel view off-screen with `blackout.exe --panel-shot` and save PNGs.
+"""Render every panel view off-screen with `central-command.exe --panel-shot` and save PNGs.
 
 No window is ever shown, so this is safe to run at any time (run it from WSL or Git Bash on Windows).
 
-  tools/panel_shots.py <blackout.exe> <out dir> [--readme]
+  tools/panel_shots.py <central-command.exe> <out dir> [--readme]
 
 Without --readme it writes every state plus sheet.png (a contact sheet for design review).
-With --readme it writes only docs-ready panel-main.png and panel-settings.png.
+With --readme it writes only the docs/panel-*.png images the README shows.
 """
 import os
 import subprocess
@@ -59,6 +59,7 @@ STATES = {
     "x-main-hot": "temp=452 rpm=9990 longnames board",
     "x-main-top": "top",
     "x-main-why4": "fanwhy=4",
+    "x-main-why5": "fanwhy=5",
     "x-main-gpu-long": "withgpu longname slot=2 gpustate=-104 what=1 fanwhy=4",
     "x-main-gpu-xbar": "withgpu profiles=0 nofans",
     "x-main-gpu-unsent": "withgpu profiles=1 noxbar unsent nofans",
@@ -68,6 +69,7 @@ STATES = {
     "x-fans-ends": "fans max=30 hyst=0 withgpu",
     "x-fans-ends-hi": "fans max=100 hyst=5 board light hover=12",
     "x-fans-why4": "fans fanwhy=4",
+    "x-fans-why5": "fans fanwhy=5",
     "x-fans-why6": "fans fanwhy=6",
     "x-wake-long": "wake hotkey longwakes",
     "x-system-long": "system fanwhy=4 longstatus",

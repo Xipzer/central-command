@@ -1,9 +1,9 @@
-// Native NVIDIA overclock profiles. Included by blackout.c (one translation unit, shares its state).
+// Native NVIDIA overclock profiles. Included by main.c (one translation unit, shares its state).
 //
-// A profile is a clock curve (one frequency offset per voltage point), a power limit and a memory offset. Blackout
-// writes them, and the XBAR (crossbar clock) offset, straight to the driver through nvapi64.dll, the driver's own
-// library, so no tuning app has to run. The driver keeps them until it resets or the PC restarts, so they are sent
-// again after startup and after a driver reset (a System event subscription, nothing is polled).
+// A profile is a clock curve (one frequency offset per voltage point), a power limit and a memory offset. Central
+// Command writes them, and the XBAR (crossbar clock) offset, straight to the driver through nvapi64.dll, the driver's
+// own library, so no tuning app has to run. The driver keeps them until it resets or the PC restarts, so they are
+// sent again after startup and after a driver reset (a System event subscription, nothing is polled).
 //
 // These are private driver interfaces that the community worked out; docs/gpu.md lists the layouts and sources.
 // Rules learned the hard way: read, change, write back (a zeroed buffer is ignored); a memory write zeroes every curve
@@ -196,7 +196,7 @@ static void nvBaseRead(void) {
     nvFree(c);
 }
 
-// ---- Profiles in blackout.ini: [gpu.1] name=  power=  memory=  curve=offset,offset,... (kHz, one per core point) ----
+// ---- Profiles in central-command.ini: [gpu.1] name=  power=  memory=  curve=offset,... (kHz, one per core point) ----
 
 static int gpuLoad(int n, int *power, int *memory, int *delta) {
     WCHAR sec[16], *list = nvAlloc(4096 * sizeof(WCHAR)), *at = list;
@@ -271,8 +271,9 @@ static int gpuApplyNow(int slot) {
 }
 
 // Reads what the card is running now and writes a report for the command line to out. With slot 1 to 5 it is also
-// kept as that profile in blackout.ini. Returns 0 when the card was read and, if asked for, the profile was written;
-// a driver code, -1000 when the card shows no core points, -1002 when blackout.ini could not be written.
+// kept as that profile in central-command.ini. Returns 0 when the card was read and, if asked for, the profile was
+// written; a driver code, -1000 when the card shows no core points, -1002 when central-command.ini could not be
+// written.
 static int gpuRead(int slot, char *out, int *len) {
     WCHAR sec[16], num[16], *list;
     int n, power = 0, memory = 0, xbar = 0, wrote = 1;
@@ -361,7 +362,7 @@ static void gpuWatch(HWND hwnd) {
 }
 
 // ---- Command line: --gpu-save N keeps what the card is running now as profile N, --gpu-apply N applies one, ----
-// ---- --gpu-status only reads. Each writes %TEMP%\blackout-gpu.txt.                                          ----
+// ---- --gpu-status only reads. Each writes %TEMP%\central-command-gpu.txt.                                   ----
 
 static int gpuCommand(LPCWSTR cmd) {
     char out[2048];
@@ -381,7 +382,7 @@ static int gpuCommand(LPCWSTR cmd) {
     }
     if (nvLib) nvClose();
     GetTempPathW(MAX_PATH, path);
-    lstrcatW(path, L"blackout-gpu.txt");
+    lstrcatW(path, L"central-command-gpu.txt");
     HANDLE f = CreateFileW(path, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 0, NULL);
     if (f == INVALID_HANDLE_VALUE) return 1;
     WriteFile(f, out, n, &w, NULL);

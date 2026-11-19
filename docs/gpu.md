@@ -1,6 +1,6 @@
 # GPU profiles without a tuning app
 
-Blackout can hold an NVIDIA overclock itself: a clock curve, a power limit, a memory offset and an XBAR (crossbar clock) offset.
+Central Command can hold an NVIDIA overclock itself: a clock curve, a power limit, a memory offset and an XBAR (crossbar clock) offset.
 It writes them to the driver through `nvapi64.dll`, the library the driver installs, so MSI Afterburner or a similar app does not have to run.
 
 Tested on one card: RTX 5090 Founders Edition, driver 621.24, Windows 11. Treat everything else as untested.
@@ -8,22 +8,22 @@ Tested on one card: RTX 5090 Founders Edition, driver 621.24, Windows 11. Treat 
 ## What you need to know first
 
 - **These are private driver interfaces.** NVIDIA does not document them. The community worked them out, and a future driver can change or block them. Keep your tuning app installed until you trust this.
-- **Blackout applies a profile, it does not find one.** Tune and stress test in your usual app, then save the result (below).
-- **The driver forgets everything** when it resets (a crash) or the PC restarts. Blackout sends the profile 10 seconds after it starts, 10 seconds after the PC wakes from sleep and 15 seconds after a driver reset.
+- **Central Command applies a profile, it does not find one.** Tune and stress test in your usual app, then save the result (below).
+- **The driver forgets everything** when it resets (a crash) or the PC restarts. Central Command sends the profile 10 seconds after it starts, 10 seconds after the PC wakes from sleep and 15 seconds after a driver reset.
 - **Writing needs admin.** Reading does not.
 - **Only the first NVIDIA GPU** is used.
 
 ## Set it up
 
 1. Apply your tested overclock with your tuning app.
-2. Open the panel (right-click the tray icon), Settings > GPU, and press **Read from card**. It reads the card once and writes `[gpu.1]` to `blackout.ini`. **+** is the next empty profile, up to five.
+2. Open the panel (right-click the tray icon), Settings > GPU, and press **Read from card**. It reads the card once and writes `[gpu.1]` to `central-command.ini`. **+** is the next empty profile, up to five.
 3. Click the profile's name to name it. Optionally add `xbar=0,300,400` under `[gpu]` for the XBAR stepper.
 4. Stop your tuning app from starting with Windows.
 
 To carry over several profiles from a tuning app, load each one there, press **+** here and read it in. To change a profile later, show it, press **Read from card** and confirm.
 The profile read from the card becomes the active one, because it is what the card is running.
 
-The same from a command line: `blackout.exe --gpu-save 1` (to `5`), then restart Blackout.
+The same from a command line: `central-command.exe --gpu-save 1` (to `5`), then restart Central Command.
 
 ## In the panel
 
@@ -51,7 +51,7 @@ curve=480000,480000,...
 | `memory` | Memory clock offset in kHz, as the driver counts it (+3000 MHz in Afterburner = 3000000) |
 | `curve` | One frequency offset in kHz per core voltage point, lowest voltage first. The count must match the card |
 
-Commands, each writing its answer to `%TEMP%\blackout-gpu.txt`:
+Commands, each writing its answer to `%TEMP%\central-command-gpu.txt`:
 
 | Command | What it does |
 |---|---|
@@ -68,7 +68,7 @@ The order is fixed, because of how the driver behaves:
 3. XBAR offset.
 4. Clock curve, then a read back that must match.
 
-If a step is refused, Blackout stops there. The card is then on the stock curve, never on a half-written one. The GPU tab shows what the driver answered.
+If a step is refused, Central Command stops there. The card is then on the stock curve, never on a half-written one. The GPU tab shows what the driver answered.
 
 ## The interfaces
 

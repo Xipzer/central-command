@@ -1,4 +1,4 @@
-# Blackout
+# Central Command
 
 A tiny Windows tray app. Click it and every screen turns off. Lighting, fans, monitor power and window positions follow the screens.
 
@@ -11,13 +11,13 @@ A tiny Windows tray app. Click it and every screen turns off. Lighting, fans, mo
 | Listed monitors powered off over DDC/CI | Those monitors powered on |
 | Window positions saved | Windows put back where they were |
 
-This works for a Blackout click and for Windows' own display timeout.
+This works for a Central Command click and for Windows' own display timeout.
 
 **Left-click** the icon: screens off.
-**Right-click**: the Blackout panel. It sits flush against the taskbar and the screen edge like the system tray menus, and takes its colour from your taskbar.
+**Right-click**: the Central Command panel. It sits flush against the taskbar and the screen edge like the system tray menus, and takes its colour from your taskbar.
 
 <p>
-<img src="docs/panel-main.png" width="280" alt="Blackout panel">
+<img src="docs/panel-main.png" width="280" alt="Central Command panel">
 <img src="docs/panel-settings.png" width="280" alt="Fan curve settings">
 </p>
 <p>
@@ -30,7 +30,7 @@ This works for a Blackout click and for Windows' own display timeout.
 - **Settings > Fans:** the fan curve (drag a point, double-click to add one, right-click to remove one), max fan speed, how much cooler it must get before the fans slow down, reset.
 - **Settings > Wake:** which inputs may wake the screens, and what woke them last, with the device behind it.
 - **Settings > GPU:** overclock profiles for an NVIDIA card: the clock curve as a chart, power limit, memory offset, XBAR offset (see [GPU profiles](#gpu-profiles-optional)).
-- **Settings > System:** Start with Windows, Exit, and what Blackout found on this PC, with its version.
+- **Settings > System:** Start with Windows, Exit, and what Central Command found on this PC, with its version.
 
 Esc goes back or closes the panel, the arrow keys change tabs. If Direct2D is unavailable, a plain menu appears instead. Hover the tray icon for the temperature, the fan speed and the GPU profile.
 
@@ -51,26 +51,26 @@ Every feature is optional. Missing hardware is skipped.
 
 ## Install
 
-1. Download the release from [Releases](../../releases) and unzip it into a folder, for example `%LOCALAPPDATA%\Blackout`. Keep the `devices` folder beside `blackout.exe` if you use the fan curve.
-2. Copy `blackout.example.ini` there as `blackout.ini` and edit it. No ini means screens off and fans only.
-3. Run `blackout.exe`. Right-click the icon and tick **Start with Windows**.
+1. Download the release from [Releases](../../releases) and unzip it into a folder, for example `%LOCALAPPDATA%\CentralCommand`. Keep the `devices` folder beside `central-command.exe` if you use the fan curve.
+2. Copy `central-command.example.ini` there as `central-command.ini` and edit it. No ini means screens off and fans only.
+3. Run `central-command.exe`. Right-click the icon and tick **Start with Windows**.
 
-For RGB, also unzip [OpenRGB](https://openrgb.org/releases.html) portable to the path in `blackout.ini`.
+For RGB, also unzip [OpenRGB](https://openrgb.org/releases.html) portable to the path in `central-command.ini`.
 
 ## Fan curve
 
 One temperature drives up to 7 fans along a curve you draw in the panel. The usual setup is a water loop: the coolant sensor on an iCUE LINK hub sets the speed of radiator fans on motherboard headers.
 
-1. For motherboard headers, install [PawnIO](https://pawnio.eu) and put `LpcIO.bin` (from PawnIO.Modules or OpenRGB) beside `blackout.exe`.
-2. Run `blackout.exe --devices` as admin. It lists the fans and temperatures it can see.
-3. Add `[fans]` to `blackout.ini` with `outputs=` and, unless you use the iCUE LINK coolant sensor, `source=`.
-4. Run Blackout as admin and tick **Start with Windows**. As admin this creates a logon task, so there is no UAC prompt at login.
+1. For motherboard headers, install [PawnIO](https://pawnio.eu) and put `LpcIO.bin` (from PawnIO.Modules or OpenRGB) beside `central-command.exe`.
+2. Run `central-command.exe --devices` as admin. It lists the fans and temperatures it can see.
+3. Add `[fans]` to `central-command.ini` with `outputs=` and, unless you use the iCUE LINK coolant sensor, `source=`.
+4. Run Central Command as admin and tick **Start with Windows**. As admin this creates a logon task, so there is no UAC prompt at login.
 
-Edit the curve in the panel (Settings > Fans): drag a point, double-click the chart to add one, right-click a point to remove it, and set **Max fan speed** and **Slow down once cooler by**. Changes apply at once and are kept in `HKCU\Software\Blackout` (`Curve`, `FanMax`, `Hysteresis`), which override the ini. **Reset to blackout.ini** drops them.
+Edit the curve in the panel (Settings > Fans): drag a point, double-click the chart to add one, right-click a point to remove it, and set **Max fan speed** and **Slow down once cooler by**. Changes apply at once and are kept in `HKCU\Software\CentralCommand` (`Curve`, `FanMax`, `Hysteresis`), which override the ini. **Reset to central-command.ini** drops them.
 
 **Override at a fixed speed** (panel main view, or the tray menu) runs the fans at one fixed speed, 20 to 100%, instead of the curve. **Fixed speed** under it sets that speed, also before the override is switched on. It pauses while the temperature is above the point where the curve reaches its top, and comes back once it is 2 C below that.
 
-Fans go up straight away and come down after the hysteresis. Motherboard fans go back to the BIOS curve when the temperature reading is lost for 20 s, on exit, sleep and shutdown, and when the curve is switched off. Set a sensible fixed speed or curve in the BIOS: it is what runs whenever Blackout does not.
+Fans go up straight away and come down after the hysteresis. Motherboard fans go back to the BIOS curve when the temperature reading is lost for 20 s, on exit, sleep and shutdown, and when the curve is switched off. Set a sensible fixed speed or curve in the BIOS: it is what runs whenever Central Command does not.
 
 ### Hardware
 
@@ -84,9 +84,9 @@ Each fan chip or controller is described by a text file in [`devices`](devices).
 | Corsair Commander Pro | 1 | Yes, untested |
 | NZXT Kraken X42 to X72, Aquacomputer D5 Next, Quadro, Octo, Farbwerk | 6 | Speeds and temperatures only |
 
-Untested means the file was written from other open source drivers and has not been run on that hardware. Blackout will not control fans through it until you set `untested=1`. If it works for you, a pull request that marks it verified helps the next person.
+Untested means the file was written from other open source drivers and has not been run on that hardware. Central Command will not control fans through it until you set `untested=1`. If it works for you, a pull request that marks it verified helps the next person.
 
-An older `blackout.ini` with `channels=1,3,4` keeps working: it means `outputs=sio/2,sio/4,sio/5`.
+An older `central-command.ini` with `channels=1,3,4` keeps working: it means `outputs=sio/2,sio/4,sio/5`.
 
 ## Choosing what wakes the screens
 
@@ -96,13 +96,13 @@ A bumped mouse or a vibrating desk can wake the screens in the middle of the nig
 - Mouse movement, other buttons and other keys are ignored, and don't reach any app
 - **Ctrl+Alt+Del** always works
 
-It applies whenever the screens go off, from Blackout or from Windows' own display timeout. Nothing runs for it while the screens are on.
+It applies whenever the screens go off, from Central Command or from Windows' own display timeout. Nothing runs for it while the screens are on.
 
 The same tab lists the last few wakes and the device behind each one (for example a mouse icon and `PRO X SUPERLIGHT`), whether that switch is on or not. A device that got past it is marked `not blocked`. Use the list to find a device that keeps waking the screens.
 
 ## Configuration
 
-`blackout.ini` sits beside `blackout.exe`. See [blackout.example.ini](blackout.example.ini).
+`central-command.ini` sits beside `central-command.exe`. See [central-command.example.ini](central-command.example.ini).
 
 | Section | Key | Meaning |
 |---|---|---|
@@ -124,27 +124,27 @@ The same tab lists the last few wakes and the device behind each one (for exampl
 | | `xbar`, `xbar_default` | XBAR offsets in MHz for the GPU tab's stepper (e.g. `0,300,400,500`), and the one used until another is picked |
 | `[gpu.1]` to `[gpu.5]` | `name`, `power`, `memory`, `curve` | GPU profiles applied natively, written by **Read from card** on the GPU tab (see [docs/gpu.md](docs/gpu.md)) |
 
-Fan speeds and toggles are set from the tray menu and kept in `HKCU\Software\Blackout`.
+Fan speeds and toggles are set from the tray menu and kept in `HKCU\Software\CentralCommand`.
 
 To find a monitor's hardware ID: Device Manager > Monitors > Properties > Details > Hardware Ids.
 
 ## GPU clock cap (optional)
 
 For an overclocked NVIDIA card on the same water loop. A cold GPU core gets extra boost bins from the driver, and an overclocked curve may not survive them.
-With `[gpu] cap_cold` and `cap_warm` set, Blackout sends `nvidia-smi -lgc 210,<cap>` when the coolant crosses the thresholds, and again every minute, because a driver reset drops the cap.
-It needs Blackout to run as admin. Leave both at 0 if you do not need it.
+With `[gpu] cap_cold` and `cap_warm` set, Central Command sends `nvidia-smi -lgc 210,<cap>` when the coolant crosses the thresholds, and again every minute, because a driver reset drops the cap.
+It needs Central Command to run as admin. Leave both at 0 if you do not need it.
 
 ## GPU profiles (optional)
 
-For an overclocked NVIDIA card. Blackout holds the overclock itself and writes it straight to the driver, so no tuning app has to run: a clock curve, a power limit and a memory offset per profile, plus the XBAR (crossbar clock) offset.
-The driver forgets all of it when it resets or the PC restarts, so Blackout sends it again after startup and after a driver reset.
+For an overclocked NVIDIA card. Central Command holds the overclock itself and writes it straight to the driver, so no tuning app has to run: a clock curve, a power limit and a memory offset per profile, plus the XBAR (crossbar clock) offset.
+The driver forgets all of it when it resets or the PC restarts, so Central Command sends it again after startup and after a driver reset.
 
 On a PC with an NVIDIA driver the panel's Settings have a **GPU** tab:
 
 - **Profiles** along the top. Clicking one only shows it: its clock curve over the card's own curve (the grey line), the top of the curve with the lowest voltage that reaches it, the power limit in % and the memory offset in MHz. **Apply** sends it. Red marks the profile that is on the card.
-- **Read from card** keeps what the card is running now as the profile on show, so an overclock you have tuned and tested in any app becomes a Blackout profile with one click. **+** is the next empty profile. A profile that exists asks before it is replaced.
+- **Read from card** keeps what the card is running now as the profile on show, so an overclock you have tuned and tested in any app becomes a Central Command profile with one click. **+** is the next empty profile. A profile that exists asks before it is replaced.
 - Click a profile's name to change it.
-- **XBAR offset**: its minus and plus step through the `xbar` values from `blackout.ini`. Sent a moment after the last step. It is a row of its own because it belongs to the card, not to a profile.
+- **XBAR offset**: its minus and plus step through the `xbar` values from `central-command.ini`. Sent a moment after the last step. It is a row of its own because it belongs to the card, not to a profile.
 - The line at the bottom says what the driver answered. On the Main view the dot beside the profile is green when it was applied, and the tray tooltip names the profile.
 
 Nothing is read from the card while the panel is open; **Read from card** reads it once.
@@ -155,7 +155,7 @@ It uses private driver interfaces and is tested on one card (RTX 5090 FE, driver
 For Kingston FURY DDR5 RGB only. OpenRGB can't detect some of these kits, so this talks to Kingston's own service instead.
 
 1. Install Kingston FURY CTRL. Its background service does the hardware access.
-2. Put `furyled.exe` beside `blackout.exe`. Delete it to turn the module off.
+2. Put `furyled.exe` beside `central-command.exe`. Delete it to turn the module off.
 
 Test it: `furyled off` or `furyled FF0000`.
 
@@ -165,7 +165,7 @@ Measured on Windows 11.
 
 | Process | When | Memory | CPU |
 |---|---|---|---|
-| `blackout.exe` | Always | 0.2 to 0.4 MB | 0% idle |
+| `central-command.exe` | Always | 0.2 to 0.4 MB | 0% idle |
 | iCUE LINK keep-alive | Every 4 s, only with `[link]` | 5 small USB transfers | ~0% |
 | Fan curve | Same 4 s tick, only with `[fans]` | One temperature read; fan write only when the duty changes. Only the definitions in use are kept, about 2 KB each | ~0% |
 | Panel | Only while open | Opens in about 15 ms, 15 to 18 MB while open, drawn on the CPU so no graphics driver is loaded | Brief |
@@ -176,22 +176,22 @@ Measured on Windows 11.
 ## Setup notes
 
 - **OpenRGB with Corsair Commander Pro or Lighting Node Pro:** set each channel's LED count once in OpenRGB (Zone Initialization). Static mode won't light a zone of size 0.
-- **OpenRGB with an iCUE LINK hub:** disable OpenRGB's "Corsair iCUE Link System Hub" detector. Blackout drives the hub itself.
+- **OpenRGB with an iCUE LINK hub:** disable OpenRGB's "Corsair iCUE Link System Hub" detector. Central Command drives the hub itself.
 - **Screens off** briefly sets the Windows display timeout to 1 second, then restores your value.
 
 ## Quirks and remedies
 
-Things we hit running Blackout every day on a water-cooled desktop (ASRock Z790 board with a Nuvoton NCT6796D, Corsair iCUE LINK hub, four monitors). Each one is either handled in the app or needs a setting from you.
+Things we hit running Central Command every day on a water-cooled desktop (ASRock Z790 board with a Nuvoton NCT6796D, Corsair iCUE LINK hub, four monitors). Each one is either handled in the app or needs a setting from you.
 
 | Quirk | What you see | Remedy |
 |---|---|---|
-| Fans go to the BIOS curve whenever Blackout is not driving them | A loud burst at exit, restart, sleep and shutdown | Set a sensible fixed speed or curve in the BIOS: it runs whenever Blackout does not |
-| Restarting Blackout | Fans loud for a few seconds; the LINK hub shows its stored hardware colour until Blackout takes it over | Expected. Avoid restarting it while you want the room dark |
-| HWiNFO (or another monitor) starts while Blackout drives the fans | Board fans at about 3,000 rpm for about 45 s while HWiNFO probes the Super I/O chip | Expected; Blackout shares the standard ISA bus mutex, and takes the fans back afterwards. Public reports of the same clash with other fan tools: [HWiNFO forum](https://www.hwinfo.com/forum/threads/hwinfo64-taking-over-fancontrol-sensor-settings.8390/), [r/FanControl](https://www.reddit.com/r/FanControl/comments/1goa24j/fan_control_borked_by_hwinfo/) |
-| Another program (HWiNFO, iCUE) has the LINK hub open too | Coolant reading lost; Blackout read the other program's replies | Fixed: Windows gives every open HID handle a copy of each input report ([Microsoft](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/hidsdi/nf-hidsdi-hidd_flushqueue), [OSR](https://community.osr.com/t/theory-buffering-in-hid-class-driver/30591)), so Blackout flushes the queue before each exchange and reopens the handle on a reply that does not match |
+| Fans go to the BIOS curve whenever Central Command is not driving them | A loud burst at exit, restart, sleep and shutdown | Set a sensible fixed speed or curve in the BIOS: it runs whenever Central Command does not |
+| Restarting Central Command | Fans loud for a few seconds; the LINK hub shows its stored hardware colour until Central Command takes it over | Expected. Avoid restarting it while you want the room dark |
+| HWiNFO (or another monitor) starts while Central Command drives the fans | Board fans at about 3,000 rpm for about 45 s while HWiNFO probes the Super I/O chip | Expected; Central Command shares the standard ISA bus mutex, and takes the fans back afterwards. Public reports of the same clash with other fan tools: [HWiNFO forum](https://www.hwinfo.com/forum/threads/hwinfo64-taking-over-fancontrol-sensor-settings.8390/), [r/FanControl](https://www.reddit.com/r/FanControl/comments/1goa24j/fan_control_borked_by_hwinfo/) |
+| Another program (HWiNFO, iCUE) has the LINK hub open too | Coolant reading lost; Central Command read the other program's replies | Fixed: Windows gives every open HID handle a copy of each input report ([Microsoft](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/hidsdi/nf-hidsdi-hidd_flushqueue), [OSR](https://community.osr.com/t/theory-buffering-in-hid-class-driver/30591)), so Central Command flushes the queue before each exchange and reopens the handle on a reply that does not match |
 | Three programs polling one LINK hub | The hub crashed once | Let one program own the hub. In OpenRGB, disable its iCUE LINK detector |
 | Two fan chains on one 1 A header | A chain of three 120 mm fans draws about 0.9 to 1.3 A at 100% | Cap `max=` (we run 80%) until the fans have a powered hub |
-| The legacy monitor-off broadcast | A monitor on the motherboard's iGPU came straight back; some iGPU DisplayPort outputs stayed half awake ("No Signal" flashes) | Blackout sets the display timeout to 1 s instead; list such monitors in `[ddc] monitors=` so they are powered off over DDC/CI. Best: run every monitor from the graphics card |
+| The legacy monitor-off broadcast | A monitor on the motherboard's iGPU came straight back; some iGPU DisplayPort outputs stayed half awake ("No Signal" flashes) | Central Command sets the display timeout to 1 s instead; list such monitors in `[ddc] monitors=` so they are powered off over DDC/CI. Best: run every monitor from the graphics card |
 | Kingston FURY RGB not seen by OpenRGB | RAM stays lit | Use the FURY module. Keep Kingston FURY CTRL installed: it is also what blanks the DIMM lighting on sleep |
 | A bumped mouse wakes the screens at night | | Settings > Wake: **Wake the screens only with** a left-click or Esc |
 | Run key and logon task both present | Whichever starts first holds the single-instance lock. If that is the non-admin Run-key copy, there is no fan control | Use one: as admin, **Start with Windows** makes the logon task |
@@ -202,7 +202,7 @@ Things we hit running Blackout every day on a water-cooled desktop (ASRock Z790 
 Needs [zig](https://ziglang.org) and Python 3 with Pillow.
 
 ```sh
-./build.sh            # checks devices/ on simulated hardware, then builds build/blackout.exe
+./build.sh            # checks devices/ on simulated hardware, then builds build/central-command.exe
 ```
 
 FURY module, on Windows: `modules\fury\build.cmd`.

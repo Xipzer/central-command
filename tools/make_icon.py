@@ -26,6 +26,6 @@ def draw(n):
 
 imgs = [draw(n) for n in SIZES]
 import sys
-out = sys.argv[1] if len(sys.argv) > 1 else "blackout.ico"
+out = sys.argv[1] if len(sys.argv) > 1 else "central-command.ico"
 imgs[-1].save(out, sizes=[(n, n) for n in SIZES], append_images=imgs[:-1])
 

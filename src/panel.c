@@ -1,5 +1,5 @@
 // Tray panel: a Windows 11 style flyout drawn with Direct2D/DirectWrite.
-// Included by blackout.c (one translation unit, shares its state).
+// Included by main.c (one translation unit, shares its state).
 //
 // Cost model: the panel exists only while it is open. d2d1.dll and dwrite.dll are loaded on open and freed on close.
 // Drawing is done on the CPU (software DC render target) into a 32-bit bitmap that is handed to a layered window.
@@ -22,8 +22,8 @@
 #define PSAPI_VERSION 2
 #include <psapi.h>
 
-#define PANEL_CLASS L"BlackoutPanel"
-#define VERSION     L"1.1.0"
+#define PANEL_CLASS L"CentralCommandPanel"
+#define VERSION     L"1.0.0"
 #define PANEL_W     372.0f
 #define SET_H       476.0f // every Settings tab has this height, so the tabs never move under the cursor
 #define PAD         16.0f
@@ -383,7 +383,7 @@ static void chainName(int i, LPWSTR out) {
     wsprintfW(out, L"Chain %d", i + 1);
 }
 
-// True when the panel has changed the curve, max speed or margin away from blackout.ini.
+// True when the panel has changed the curve, max speed or margin away from central-command.ini.
 static BOOL curveEdited(void) {
     if (panelTest) return pref(L"Edited", 0);
     return RegGetValueW(HKEY_CURRENT_USER, APP_KEY, L"Curve", RRF_RT_REG_SZ, NULL, NULL, NULL) == ERROR_SUCCESS ||
@@ -392,8 +392,8 @@ static BOOL curveEdited(void) {
 }
 
 static LPCWSTR fanWhyText(void) {
-    static const LPCWSTR why[] = {L"", L"Not set up: add [fans] to blackout.ini", L"Needs Blackout to run as admin", L"PawnIO or LpcIO.bin is missing",
-                                  L"No known fan chip found: run blackout.exe --devices", L"Fan or sensor not found: check blackout.ini",
+    static const LPCWSTR why[] = {L"", L"Not set up: add [fans] to central-command.ini", L"Needs Central Command to run as admin", L"PawnIO or LpcIO.bin is missing",
+                                  L"No known fan chip: run central-command.exe --devices", L"Fan or sensor not found: check central-command.ini",
                                   L"Untested hardware: set untested=1 to use it"};
     return why[fanWhy < 0 || fanWhy > 6 ? 0 : fanWhy];
 }
@@ -403,7 +403,7 @@ static LPCWSTR fanWhyText(void) {
 static void paintHeader(float x, float y, float w) {
     if (view == V_MAIN) {
         moon(x + 9, y + 16, 9);
-        text(L"Blackout", F_BRAND, rc(x + 26, y + 5, 150, 22), ink(), 1, DWRITE_TEXT_ALIGNMENT_LEADING);
+        text(L"Central Command", F_BRAND, rc(x + 26, y + 5, 150, 22), ink(), 1, DWRITE_TEXT_ALIGNMENT_LEADING);
         hit[H_SCREENS] = rc(x + w - 128, y, 128, 32);
         fillRound(hit[H_SCREENS], 16, ACCENT, hover == H_SCREENS ? 0.85f : 1);
         powerIcon(x + w - 110, y + 17, 0xFFFFFF);
@@ -676,7 +676,7 @@ static void paintFans(float x, float y, float w) {
         hit[H_RESET] = rc(x, cy, w, ROW);
         hoverFill(H_RESET, hit[H_RESET]);
     }
-    text(L"Reset to blackout.ini", F_ROW, rc(ix, cy + 10, iw, 22), ink(), edited ? 1 : 0.4f, DWRITE_TEXT_ALIGNMENT_LEADING);
+    text(L"Reset to central-command.ini", F_ROW, rc(ix, cy + 10, iw, 22), ink(), edited ? 1 : 0.4f, DWRITE_TEXT_ALIGNMENT_LEADING);
 }
 
 static void paintWake(float x, float y, float w) {
@@ -746,11 +746,11 @@ static void paintSystem(float x, float y, float w) {
     divider(x, y + ROW, w);
     hit[H_EXIT] = rc(x, y + ROW, w, ROW);
     hoverFill(H_EXIT, hit[H_EXIT]);
-    text(L"Exit Blackout", F_ROW, rc(ix, y + ROW + 10, iw, 22), ACCENT, 1, DWRITE_TEXT_ALIGNMENT_LEADING);
+    text(L"Exit Central Command", F_ROW, rc(ix, y + ROW + 10, iw, 22), ACCENT, 1, DWRITE_TEXT_ALIGNMENT_LEADING);
     y += 2 * ROW + GAP;
 
-    // What Blackout found on this machine: 2 = working, 1 = needs attention, 0 = not set up. The dot says "working",
-    // so the value only adds what the dot cannot. The last row is the version.
+    // What Central Command found on this machine: 2 = working, 1 = needs attention, 0 = not set up. The dot says
+    // "working", so the value only adds what the dot cannot. The last row is the version.
     float rh = (panelH - PAD - y - 8) / 9;
     card(x, y, w, panelH - PAD - y);
     y += 4 + (rh - 28) / 2;
@@ -763,7 +763,7 @@ static void paintSystem(float x, float y, float w) {
     statusRow(srcDev ? L"Temperature" : L"Water sensor", coolant >= 0 ? s : hasCurve ? L"No reading" : L"Not used", coolant >= 0 ? 2 : hasCurve ? 1 : 0, x, y + rh, w);
     wsprintfW(s, L"%d LEDs", linkLeds);
     statusRow(L"Pump lighting", !linkLeds ? L"Not set up" : linkOk ? s : L"Hub not answering", !linkLeds ? 0 : linkOk ? 2 : 1, x, y + 2 * rh, w);
-    statusRow(L"OpenRGB", hasOpenRgb ? L"Found" : openrgb[0] ? L"Not found at the path in blackout.ini" : L"Not set up", hasOpenRgb ? 2 : openrgb[0] ? 1 : 0, x,
+    statusRow(L"OpenRGB", hasOpenRgb ? L"Found" : openrgb[0] ? L"Not found at the path in central-command.ini" : L"Not set up", hasOpenRgb ? 2 : openrgb[0] ? 1 : 0, x,
               y + 3 * rh, w);
     statusRow(L"RAM lighting", hasRam ? L"FURY module" : L"Not installed", hasRam ? 2 : 0, x, y + 4 * rh, w);
     statusRow(L"Monitor power", ddcIds[0] ? ddcIds : L"Not set up", ddcIds[0] ? 2 : 0, x, y + 5 * rh, w);
@@ -771,7 +771,7 @@ static void paintSystem(float x, float y, float w) {
     statusRow(L"Admin rights", admin ? L"Yes" : L"No", admin ? 2 : outCount ? 1 : 0, x, y + 6 * rh, w);
     int gpu = hasGpu() ? gpuStatus(s) : 0;
     statusRow(L"GPU profile", !hasGpu() ? L"Not set up" : s, gpu, x, y + 7 * rh, w);
-    statusRow(L"Blackout", VERSION, -1, x, y + 8 * rh, w);
+    statusRow(L"Central Command", VERSION, -1, x, y + 8 * rh, w);
 }
 
 // GPU tab: one profile drawn as a picture. Profile pills, then a card with the clock curve over the card's own curve,
@@ -979,7 +979,7 @@ static void paintGpu(float x, float y, float w) {
     else if (gpuKept == shown && gpuKeptState) {
         state = 1;
         if (gpuKeptState == -2) lstrcpyW(say, L"No NVIDIA driver found");
-        else if (gpuKeptState == -1002) lstrcpyW(say, L"Cannot write blackout.ini");
+        else if (gpuKeptState == -1002) lstrcpyW(say, L"Cannot write central-command.ini");
         else if (gpuKeptState == -1000) lstrcpyW(say, L"Card shows no curve points");
         else wsprintfW(say, L"Card not read (%d)", gpuKeptState);
     } else if (!sendable) lstrcpyW(say, L"Empty profile"), state = 0;
@@ -1237,7 +1237,7 @@ static void panelGo(int to) {
     panelRender(&pos);
 }
 
-// Ends typing a profile's name. keep writes it to [gpu.N] name= in blackout.ini.
+// Ends typing a profile's name. keep writes it to [gpu.N] name= in central-command.ini.
 static void nameDone(BOOL keep) {
     WCHAR sec[16];
     int slot = gpuOnShow();
@@ -1292,8 +1292,8 @@ static void panelClick(int id) {
         else gpuWait = 1, SetTimer(panelOwner, TIMER_GPU, 100, NULL);
         break;
     case H_GPU_KEEP:
-        // Reads the card once, on the worker thread, and writes the profile to blackout.ini. A profile that exists
-        // is only replaced on a second press.
+        // Reads the card once, on the worker thread, and writes the profile to central-command.ini. A profile that
+        // exists is only replaced on a second press.
         gpuKeepSlot = gpuOnShow();
         if (gpuKeepSlot <= gpuProfiles && !keepArmed) {
             keepArmed = TRUE;
@@ -1578,7 +1578,7 @@ static BOOL panelShow(HWND owner) {
     int pw = (int)(PANEL_W * panelScale + 0.5f), ph = (int)(panelH * panelScale + 0.5f);
     dockTop = wa.top > mi.rcMonitor.top; // taskbar at the top
     int px = wa.right - pw, py = dockTop ? wa.top : wa.bottom - ph;
-    panel = CreateWindowExW(WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_TOPMOST | (panelHidden ? WS_EX_NOACTIVATE : 0), PANEL_CLASS, L"Blackout", WS_POPUP,
+    panel = CreateWindowExW(WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_TOPMOST | (panelHidden ? WS_EX_NOACTIVATE : 0), PANEL_CLASS, L"Central Command", WS_POPUP,
                             px, py, pw, ph, owner, NULL, GetModuleHandleW(NULL), NULL);
     if (!panel) {
         panelFree();
@@ -1656,7 +1656,7 @@ static void panelBench(void) {
     LARGE_INTEGER q, a, b;
     MSG m;
     GetTempPathW(MAX_PATH, path);
-    lstrcatW(path, L"blackout-bench.txt");
+    lstrcatW(path, L"central-command-bench.txt");
     HANDLE f = CreateFileW(path, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 0, NULL);
     QueryPerformanceFrequency(&q);
     panelHidden = TRUE;
@@ -1782,7 +1782,7 @@ static int panelDev(LPWSTR cmd) {
         if (flag(cmd, L"keptfail")) gpuKept = gpuOnShow(), gpuKeptState = -1002;
         if (flag(cmd, L"naming")) naming = TRUE, lstrcpyW(nameBuf, L"Quiet, cap 2,9");
     } else {
-        gpuProfiles = xbarCount = 0; // screenshots of the other tabs don't depend on this machine's blackout.ini
+        gpuProfiles = xbarCount = 0; // screenshots of the other tabs don't depend on this machine's central-command.ini
     }
     tabsBuild();
     int to = flag(cmd, L"fans") ? V_FANS : flag(cmd, L"wake") ? V_WAKE : flag(cmd, L"system") ? V_SYSTEM : flag(cmd, L"gpu") ? V_GPU : V_MAIN;

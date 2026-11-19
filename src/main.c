@@ -1,4 +1,5 @@
-// Blackout: tray app for screens off. RGB, fans, DDC monitor power and window layout follow the display state.
+// Central Command: one tray app for the whole PC. Screens off, with RGB, fans, DDC monitor power and window layout
+// following the display state; fans that follow the water temperature; native NVIDIA GPU profiles.
 // One hidden window. The only periodic work is the optional 4 s tick (iCUE LINK lighting keep-alive and the fan
 // curve). Helpers (OpenRGB, furyled, schtasks) run once and exit. Fan chips and USB controllers are described by the
 // definition files in the devices folder (devices.c).
@@ -40,10 +41,11 @@
 #define MAX_CURVE    8
 #define MAX_OUT      7
 #define RUN_KEY      L"Software\\Microsoft\\Windows\\CurrentVersion\\Run"
-#define TASK_KEY     L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Schedule\\TaskCache\\Tree\\Blackout"
-#define APP_KEY      L"Software\\Blackout"
-#define APP_NAME     L"Blackout"
-#define CONFIG       L"blackout.ini"
+#define TASK_KEY     L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Schedule\\TaskCache\\Tree\\CentralCommand"
+#define APP_KEY      L"Software\\CentralCommand"
+#define APP_NAME     L"Central Command"
+#define APP_ID       L"CentralCommand" // window class, Run value and logon task: what scripts look for
+#define CONFIG       L"central-command.ini"
 
 static NOTIFYICONDATAW nid;
 static UINT taskbarCreated;
@@ -82,7 +84,8 @@ static void panelUpdate(void);
 // Cached switches, so the 4 s tick never reads the registry. Written through to HKCU when changed.
 static BOOL litOn = TRUE, litWant = TRUE, curveOn = TRUE, linkOk;
 // Why the fan curve is off (shown in the panel): 0 active, 1 no [fans], 2 not admin, 3 PawnIO or module missing, 4 no known
-// fan chip, 5 a fan or sensor named in blackout.ini is not there, 6 the definition is untested and untested=1 is not set.
+// fan chip, 5 a fan or sensor named in central-command.ini is not there, 6 the definition is untested and untested=1
+// is not set.
 static int fanWhy = 1;
 // What woke the screens (panel > Settings > Wake). Kept in memory only, newest first.
 #define MAX_WAKES 5
@@ -118,7 +121,7 @@ static BOOL isElevated(void) {
 }
 
 static BOOL runKeySet(void) {
-    return RegGetValueW(HKEY_CURRENT_USER, RUN_KEY, APP_NAME, RRF_RT_REG_SZ, NULL, NULL, NULL) == ERROR_SUCCESS;
+    return RegGetValueW(HKEY_CURRENT_USER, RUN_KEY, APP_ID, RRF_RT_REG_SZ, NULL, NULL, NULL) == ERROR_SUCCESS;
 }
 
 static BOOL taskSet(void) {
@@ -163,22 +166,22 @@ static void createTask(LPCWSTR exe) {
     xml[0] = 0;
     for (int i = 0; i < (int)(sizeof(parts) / sizeof(*parts)); i++) lstrcatW(xml, parts[i]);
     GetTempPathW(MAX_PATH, file);
-    lstrcatW(file, L"blackout-task.xml");
+    lstrcatW(file, L"central-command-task.xml");
     HANDLE f = CreateFileW(file, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 0, NULL);
     if (f == INVALID_HANDLE_VALUE) return;
     WriteFile(f, xml, lstrlenW(xml) * sizeof(WCHAR), &w, NULL);
     CloseHandle(f);
-    wsprintfW(cmd, L"schtasks.exe /Create /TN Blackout /XML \"%s\" /F", file);
+    wsprintfW(cmd, L"schtasks.exe /Create /TN CentralCommand /XML \"%s\" /F", file);
     runWait(cmd);
     DeleteFileW(file);
 }
 
 static void toggleStartup(void) {
     HKEY key;
-    WCHAR exe[MAX_PATH], cmd[64] = L"schtasks.exe /Delete /TN Blackout /F";
+    WCHAR exe[MAX_PATH], cmd[64] = L"schtasks.exe /Delete /TN CentralCommand /F";
     if (RegOpenKeyExW(HKEY_CURRENT_USER, RUN_KEY, 0, KEY_SET_VALUE, &key) != ERROR_SUCCESS) return;
     if (startupEnabled()) {
-        RegDeleteValueW(key, APP_NAME);
+        RegDeleteValueW(key, APP_ID);
         if (taskSet() && isElevated()) runWait(cmd);
     } else if (isElevated()) {
         GetModuleFileNameW(NULL, exe, MAX_PATH);
@@ -189,7 +192,7 @@ static void toggleStartup(void) {
         DWORD len = GetModuleFileNameW(NULL, path + 1, MAX_PATH);
         path[len + 1] = L'"';
         path[len + 2] = 0;
-        RegSetValueExW(key, APP_NAME, 0, REG_SZ, (BYTE *)path, (len + 3) * sizeof(WCHAR));
+        RegSetValueExW(key, APP_ID, 0, REG_SZ, (BYTE *)path, (len + 3) * sizeof(WCHAR));
     }
     RegCloseKey(key);
 }
@@ -225,7 +228,8 @@ static void applyRgb(BOOL on) {
         lstrcatW(chain, L"\"");
         spawn(chain);
     }
-    // Optional FURY module: furyled.exe beside blackout.exe drives Kingston FURY DDR5 through Kingston's own service.
+    // Optional FURY module: furyled.exe beside central-command.exe drives Kingston FURY DDR5 through Kingston's own
+    // service.
     if (hasRam) {
         exeDir(exe, L"furyled.exe");
         if (on) wsprintfW(cmd, L"\"%s\" %02X%02X%02X", exe, color[0], color[1], color[2]);
@@ -282,7 +286,7 @@ static void loadConfig(void) {
     for (WCHAR *c = outSpec; *c; c++) outCount += *c == L',';
     if (outCount > MAX_OUT) outCount = MAX_OUT;
     GetPrivateProfileStringW(L"fans", L"source", L"link", srcSpec, 64, iniPath);
-    // A curve edited in the panel is kept in HKCU\Software\Blackout\Curve and wins over the ini.
+    // A curve edited in the panel is kept in HKCU\Software\CentralCommand\Curve and wins over the ini.
     DWORD n = sizeof(list);
     if (RegGetValueW(HKEY_CURRENT_USER, APP_KEY, L"Curve", RRF_RT_REG_SZ, NULL, list, &n) != ERROR_SUCCESS)
         GetPrivateProfileStringW(L"fans", L"curve", L"30:40,45:100", list, 128, iniPath);
@@ -354,7 +358,7 @@ static HANDLE openHid(LPCWSTR id, LPCWSTR iface, DWORD flags) {
 
 // iCUE LINK hub protocol (from OpenRGB's CorsairICueLinkController): 513-byte reports [0, 0, 1, cmd..., data...],
 // each answered by one 513-byte input report. The hub drops back to its stored hardware lighting ~5 s after the last
-// colour frame, so Blackout re-sends the frame every few seconds. Each tick is four tiny HID transactions.
+// colour frame, so Central Command re-sends the frame every few seconds. Each tick is four tiny HID transactions.
 static HANDLE ioEvent;
 
 // One HID exchange with 1 s timeouts: send a report (if any), then read one (if wanted).
@@ -457,8 +461,8 @@ static BOOL linkTemp(double *t) {
 }
 
 // ---- Fan hardware ----
-// What Blackout knows about a fan chip or a USB controller comes from a definition file (devices.c). This part joins
-// those to Windows: Super I/O ports through PawnIO's LpcIO module (PawnIO installed, Blackout run as admin, access
+// What Central Command knows about a fan chip or a USB controller comes from a definition file (devices.c). This part
+// joins those to Windows: Super I/O ports through PawnIO's LpcIO module (PawnIO installed, run as admin, access
 // shared with HWiNFO and LibreHardwareMonitor through the standard ISA bus mutex), and HID reports.
 #include "devices.c"
 
@@ -477,10 +481,11 @@ static BOOL fanManual;
 static Dev *defs;
 static int defCount;
 
-// What a motherboard fan's registers held before Blackout took it is also noted in a registry key that lasts until
-// shutdown (HKLM, volatile). If Blackout is killed while it holds a fan, the next start finds the fan in manual mode
-// and, with the note, can still hand it back as the BIOS had it. Without a note, manual mode is the BIOS's own setting.
-#define HELD_KEY L"SOFTWARE\\Blackout\\Held"
+// What a motherboard fan's registers held before Central Command took it is also noted in a registry key that lasts
+// until shutdown (HKLM, volatile). If Central Command is killed while it holds a fan, the next start finds the fan in
+// manual mode and, with the note, can still hand it back as the BIOS had it. Without a note, manual mode is the BIOS's
+// own setting.
+#define HELD_KEY L"SOFTWARE\\CentralCommand\\Held"
 
 static BOOL heldRead(int i, BYTE *was) {
     WCHAR name[80];
@@ -715,7 +720,7 @@ static BOOL refParse(char *spec, FanRef *r) {
     return dvText(r->dev, sizeof(r->dev), dvTrim(spec)) && dvText(r->item, sizeof(r->item), dvTrim(slash + 1));
 }
 
-// The definition a name in blackout.ini means: "sio" is the fan chip that was found, anything else a file name.
+// The definition a name in central-command.ini means: "sio" is the fan chip that was found, anything else a file name.
 static Dev *defFind(const char *name, int chip0, int chip1) {
     if (dvSame(name, "sio")) return chip0 >= 0 ? &defs[chip0] : chip1 >= 0 ? &defs[chip1] : NULL;
     for (int i = 0; i < defCount; i++)
@@ -723,8 +728,8 @@ static Dev *defFind(const char *name, int chip0, int chip1) {
     return NULL;
 }
 
-// Works out what [fans] in blackout.ini means on this machine and gets that hardware ready. FALSE, with fanWhy set,
-// when the curve can't run. Afterwards only the definitions in use are still in memory.
+// Works out what [fans] in central-command.ini means on this machine and gets that hardware ready. FALSE, with fanWhy
+// set, when the curve can't run. Afterwards only the definitions in use are still in memory.
 static BOOL fansInit(void) {
     char spec[200], src[64], *list = spec, *tok;
     FanRef refs[MAX_OUT + 1]; // the outputs, then the source
@@ -752,7 +757,7 @@ static BOOL fansInit(void) {
         isaMutex = CreateMutexW(NULL, FALSE, L"Global\\Access_ISABUS.HTP.Method");
         if (!isaLock()) goto done;
         chip[0] = sioProbe(pio[0], 0, defs, defCount, &id);
-        // The second config port is looked at only when something in blackout.ini is not behind the first.
+        // The second config port is looked at only when something in central-command.ini is not behind the first.
         for (int i = 0; i < total; i++) {
             Dev *d = defFind(refs[i].dev, chip[0], -1);
             second |= dvSame(refs[i].dev, "sio") ? chip[0] < 0 : d && d->type == DEV_SIO && !d->host;
@@ -902,8 +907,8 @@ static int reportDev(char *out, int n, Dev *d) {
     return n;
 }
 
-// blackout.exe --devices: what Blackout sees on this machine, written to %TEMP%\blackout-devices.txt and opened.
-// Reads only. Safe beside a running Blackout (same mutex).
+// central-command.exe --devices: what Central Command sees on this machine, written to
+// %TEMP%\central-command-devices.txt and opened. Reads only. Safe beside a running Central Command (same mutex).
 static int devicesReport(void) {
     enum { REPORT = 65536, ERRORS = 8192 };
     WCHAR path[MAX_PATH];
@@ -913,8 +918,8 @@ static int devicesReport(void) {
     if (!out || !errors) return 1;
     loadConfig();
     defsLoad(errors, ERRORS);
-    n = wsprintfA(out, "Blackout device report\r\n%d definitions read from the devices folder\r\n", defCount - 1);
-    n += wsprintfA(out + n, "In blackout.ini: outputs=sio/<fan number>,...  and  source=sio/<temp name>  (docs/devices.md)\r\n");
+    n = wsprintfA(out, "Central Command device report\r\n%d definitions read from the devices folder\r\n", defCount - 1);
+    n += wsprintfA(out + n, "In central-command.ini: outputs=sio/<fan number>,...  and  source=sio/<temp name>  (docs/devices.md)\r\n");
     HANDLE pio = pioOpen();
     if (!pio) n += wsprintfA(out + n, "\r\nMotherboard fan chips: not read. %s\r\n", fanWhy == 2 ? "Run this as admin." : "PawnIO or LpcIO.bin is missing.");
     isaMutex = CreateMutexW(NULL, FALSE, L"Global\\Access_ISABUS.HTP.Method");
@@ -938,7 +943,7 @@ static int devicesReport(void) {
     }
     if (errors[0]) n += wsprintfA(out + n, "\r\nDefinitions that could not be read:\r\n"), lstrcpynA(out + n, errors, REPORT - n), n += lstrlenA(out + n);
     GetTempPathW(MAX_PATH, path);
-    lstrcatW(path, L"blackout-devices.txt");
+    lstrcatW(path, L"central-command-devices.txt");
     HANDLE f = CreateFileW(path, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 0, NULL);
     if (f == INVALID_HANDLE_VALUE) return 1;
     WriteFile(f, out, n, &w, NULL);
@@ -1009,10 +1014,10 @@ static void tipUpdate(void) {
     int key = (!hasCurve ? -2 : coolant < 0 ? -1 : ovState() * 100000 + (int)(coolant + 0.5) * 1000 + (fanDuty < 0 ? 999 : fanDuty)) * 8 + gpu;
     if (key == tipShown) return;
     tipShown = key;
-    if (!hasCurve) lstrcpyW(nid.szTip, gpu ? L"Blackout" : L"Blackout: click for screens off, right-click for the panel");
-    else if (coolant < 0) lstrcpyW(nid.szTip, L"Blackout \x00B7 No temperature reading \x00B7 Fans on the BIOS curve");
-    else if (fanDuty < 0) wsprintfW(nid.szTip, L"Blackout \x00B7 %s %d \x00B0" L"C \x00B7 Fans on the BIOS curve", srcLabel, (int)(coolant + 0.5));
-    else wsprintfW(nid.szTip, L"Blackout \x00B7 %s %d \x00B0" L"C \x00B7 Fans %d%%%s", srcLabel, (int)(coolant + 0.5), fanDuty,
+    if (!hasCurve) lstrcpyW(nid.szTip, gpu ? L"Central Command" : L"Central Command: click for screens off, right-click for the panel");
+    else if (coolant < 0) lstrcpyW(nid.szTip, L"Central Command \x00B7 No temperature reading \x00B7 Fans on the BIOS curve");
+    else if (fanDuty < 0) wsprintfW(nid.szTip, L"Central Command \x00B7 %s %d \x00B0" L"C \x00B7 Fans on the BIOS curve", srcLabel, (int)(coolant + 0.5));
+    else wsprintfW(nid.szTip, L"Central Command \x00B7 %s %d \x00B0" L"C \x00B7 Fans %d%%%s", srcLabel, (int)(coolant + 0.5), fanDuty,
                    ovState() == 1 ? L" (override)" : ovState() == 2 ? L" (override paused)" : L"");
     if (gpu == 6) lstrcatW(nid.szTip, L" \x00B7 GPU settings not applied");
     else if (gpu && gpuNames[gpu][0]) wsprintfW(nid.szTip + lstrlenW(nid.szTip), L" \x00B7 GPU %s", gpuNames[gpu]);
@@ -1554,7 +1559,7 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE hp, LPWSTR cmd, int show) {
     if (wcsstr(cmd, L"--panel-")) return panelDev(cmd);
     if (wcsstr(cmd, L"--devices")) return devicesReport();
     if (wcsstr(cmd, L"--gpu-")) return gpuCommand(cmd);
-    HANDLE mutex = CreateMutexW(NULL, TRUE, L"Local\\BlackoutTray");
+    HANDLE mutex = CreateMutexW(NULL, TRUE, L"Local\\CentralCommand");
     if (GetLastError() == ERROR_ALREADY_EXISTS) return 0;
 
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
@@ -1562,9 +1567,9 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE hp, LPWSTR cmd, int show) {
     WNDCLASSW wc = {0};
     wc.lpfnWndProc = wndProc;
     wc.hInstance = inst;
-    wc.lpszClassName = APP_NAME;
+    wc.lpszClassName = APP_ID;
     RegisterClassW(&wc);
-    HWND hwnd = CreateWindowExW(WS_EX_TOOLWINDOW, APP_NAME, APP_NAME, WS_POPUP, 0, 0, 0, 0, NULL, NULL, inst, NULL);
+    HWND hwnd = CreateWindowExW(WS_EX_TOOLWINDOW, APP_ID, APP_NAME, WS_POPUP, 0, 0, 0, 0, NULL, NULL, inst, NULL);
     mainWnd = hwnd;
     taskbarCreated = RegisterWindowMessageW(L"TaskbarCreated");
 
@@ -1576,8 +1581,8 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE hp, LPWSTR cmd, int show) {
     nid.uVersion = NOTIFYICON_VERSION_4;
     int px = GetSystemMetricsForDpi(SM_CXSMICON, GetDpiForSystem());
     nid.hIcon = LoadImageW(inst, MAKEINTRESOURCEW(1), IMAGE_ICON, px, px, 0);
-    lstrcpyW(nid.szTip, L"Blackout: click for screens off, right-click for the panel");
-    // Started at logon, Blackout can be faster than the taskbar: then the icon is refused, and the taskbar's
+    lstrcpyW(nid.szTip, L"Central Command: click for screens off, right-click for the panel");
+    // Started at logon, Central Command can be faster than the taskbar: then the icon is refused, and the taskbar's
     // "created" broadcast may already have gone. Try again every 2 s for a minute.
     if (!Shell_NotifyIconW(NIM_ADD, &nid)) SetTimer(hwnd, TIMER_ICON, 2000, NULL);
     else Shell_NotifyIconW(NIM_SETVERSION, &nid);

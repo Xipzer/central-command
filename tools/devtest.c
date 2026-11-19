@@ -2,7 +2,7 @@
 //
 //   devtest devices/*.ini
 //
-// It includes the same devices.c that blackout.exe uses and gives it a simulated Super I/O chip and a fake HID
+// It includes the same devices.c that central-command.exe uses and gives it a simulated Super I/O chip and a fake HID
 // transport in place of real ports. For each file it checks that:
 //   - the file is plain ASCII, parses, and claims no chip or USB ID that another file claims;
 //   - the chip is found behind config port 2E and behind 4E, with the right key sequence and nothing else written;
@@ -10,7 +10,8 @@
 //   - taking a fan, changing its duty and handing it back leaves every register exactly as it was, also when the
 //     fan was found in manual mode, and when an instance that was killed had left it there;
 //   - USB definitions build their commands and decode their reports as written.
-// It also replays the fan control Blackout shipped before definitions existed and requires the same port traffic.
+// It also replays the fan control that shipped before definitions existed (as Blackout, the tool this grew out of)
+// and requires the same port traffic.
 #include <stdio.h>
 #include <stdlib.h>
 #include "../src/devices.c"
@@ -413,7 +414,7 @@ static void testCommanderPro(void) {
     CHECK(devTempRead(&defs[m], 1, &c) && c == 31.5 && hidOut[1] == 0x11 && hidOut[2] == 1, "temperature 2 is not 00 11 01, 1/100 C at bytes 2 and 3");
 }
 
-// ---- The fan control Blackout shipped before definitions (commit a3fb290), kept here as the reference ----
+// ---- The fan control that shipped before definitions (commit a3fb290), kept here as the reference ----
 
 static const int oldPage[7] = {0x100, 0x200, 0x300, 0x800, 0x900, 0xA00, 0xB00};
 static unsigned char oldMode[7], oldDuty[7];
@@ -561,13 +562,13 @@ int main(int argc, char **argv) {
             }
         for (long i = 0; i < size; i++)
             if ((unsigned char)texts[count][i] >= 0x80 || texts[count][i] == '\t' || !texts[count][i]) {
-                failed("plain ASCII only, no tabs (Blackout reads files up to 16384 bytes)");
+                failed("plain ASCII only, no tabs (Central Command reads files up to 16384 bytes)");
                 break;
             }
         if (size > 16384) failed("larger than 16384 bytes");
         count++;
     }
-    // The built-in fallback goes last, as in blackout.exe.
+    // The built-in fallback goes last, as in central-command.exe.
     texts[count] = malloc(sizeof(devBuiltin));
     memcpy(texts[count], devBuiltin, sizeof(devBuiltin));
     strcpy(names[count++], "builtin");
