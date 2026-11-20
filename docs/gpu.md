@@ -74,6 +74,26 @@ The order is fixed, because of how the driver behaves:
 
 If a step is refused, Central Command stops there. The card is then on the stock curve, never on a half-written one. The GPU tab shows what the driver answered.
 
+## Choosing a profile: what a flat cap buys (measured)
+
+One card (RTX 5090 FE, driver 621.24, water cooled), Time Spy Extreme graphics test 2, 20 Nov 2026. "Raised top" is a curve capped at 3,090 MHz up to 1,100 mV that climbs again to 3,440 MHz at 1,150 mV. The flat rows are the same curve held flat at the cap. Power is the card's own reading.
+
+| Curve | fps | Watts | Against the raised top |
+|---|---|---|---|
+| Raised top | 176.9 | 633 | |
+| Flat 3,090 | 172.5 | 524 | 2.5 % slower, 17 % less power |
+| Flat 3,000 | 169.3 | 494 | 4.3 % slower, 22 % less |
+| Flat 2,800 | 159.1 | 437 | 10.1 % slower, 31 % less |
+| Flat 2,600 | 149.5 | 406 | 15.5 % slower, 36 % less |
+| Flat 2,400 | 139.4 | 367 | 21.2 % slower, 42 % less |
+
+- The first two rows are 5 runs each, alternated run by run; their ranges do not overlap. The rest are 2 runs each: screening, not validation.
+- The knee is at 3,000 to 3,090 MHz. Above it, 1 % of performance buys 5 to 7 % of power. Below it the trade is roughly one for one.
+- With a raised top, heavy loads climb in voltage and peaked at 620 to 668 W on a connector rated for 600 W. The flat 3,090 curve stayed at or under 595 W.
+- A lower cap is not an undervolt: the cap does not set the voltage the card settles at (it read between 0.91 and 0.99 V from step to step).
+
+The full data and method are in https://github.com/Xipzer/blackwell-field-notes.
+
 ## The interfaces
 
 All through `nvapi_QueryInterface(id)` in `nvapi64.dll`. Sizes are in bytes; the version word is `size | version << 16`.
