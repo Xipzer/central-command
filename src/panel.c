@@ -211,7 +211,7 @@ static void mark(float x, float y, float r) {
     float w = r / 3, m = r - w / 2, k = 0.7071f * m;
     arc(x + k, y + k, x + k, y - k, m, TRUE, ink(), w);
     dot(x + k, y + k, w / 2, ink(), 1), dot(x + k, y - k, w / 2, ink(), 1); // round ends
-    dot(x, y, w, ink(), 1);
+    dot(x, y, w, ACCENT, 1); // the centre point is the accent, in the header and in the tray
 }
 static void powerIcon(float cx, float cy, UINT rgb) {
     arc(cx + 3.3f, cy - 4.4f, cx - 3.3f, cy - 4.4f, 5.5f, TRUE, rgb, 2);
