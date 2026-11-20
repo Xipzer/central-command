@@ -59,6 +59,10 @@ Commands, each writing its answer to `%TEMP%\central-command-gpu.txt`:
 | `--gpu-save N` | The same, then saves it as profile N (what **Read from card** does) |
 | `--gpu-apply N` | Applies profile N now (needs admin) |
 
+## If a profile ever stops Windows from starting
+
+The automatic send at startup protects itself: if Windows went down within three minutes of the last automatic send, or without a clean exit, the next start sends nothing and the GPU tab says "Held back after an unclean shutdown". The card then runs stock until you press Apply. Scheduled tasks do not run in Safe Mode either, so Safe Mode always starts without the profile; from there delete or rename the `[gpu.N]` section, or set `HKCU\Software\CentralCommand\GpuProfile` to a safe profile.
+
 ## How it is applied
 
 The order is fixed, because of how the driver behaves:

@@ -36,6 +36,7 @@
 #define TIMER_XBAR   7
 #define TIMER_GPU    8
 #define TIMER_KEEP   9
+#define TIMER_ARMED  10
 #define MAX_LINK_LEDS 160
 #define MAX_WINDOWS  256
 #define MAX_CURVE    8
@@ -1423,6 +1424,10 @@ static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             SetTimer(hwnd, TIMER_LINK, ok || hasCurve ? 4000 : 30000, NULL);
             return 0;
         }
+        if (wp == TIMER_ARMED) {
+            setDword(L"GpuArmed", 0);
+            return 0;
+        }
         if (wp == TIMER_XBAR || wp == TIMER_GPU || wp == TIMER_KEEP) {
             // Only XBAR, the whole profile, or the card read into a profile. One at a time: try again shortly if the
             // last one is still running.
@@ -1560,7 +1565,7 @@ static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         if (screensOn && savedCount) SetTimer(hwnd, TIMER_LAYOUT, 2500, NULL);
         return 0;
     case WM_ENDSESSION:
-        if (wp) fansRelease();
+        if (wp) fansRelease(), setDword(L"GpuArmed", 0);
         return 0;
     case WM_WAKE:
         hotkeyCause = (DWORD)wp;
@@ -1574,6 +1579,7 @@ static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         break; // DefWindowProc releases the input
     }
     case WM_DESTROY:
+        setDword(L"GpuArmed", 0);
         hotkeyDisarm();
         restoreIdle();
         fansRelease();
@@ -1645,7 +1651,20 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE hp, LPWSTR cmd, int show) {
     ChangeWindowMessageFilterEx(hwnd, WM_SETTINGCHANGE, MSGFLT_ALLOW, NULL);
     if (linkLeds || hasCurve) SetTimer(hwnd, TIMER_LINK, 1000, NULL);
     // The driver forgets a profile when it resets or the PC restarts: send it now, and again after every reset.
-    if (hasGpu()) gpuWatch(hwnd), SetTimer(hwnd, TIMER_GPU, 10000, NULL);
+    if (hasGpu()) {
+        gpuWatch(hwnd);
+        // A way out of a crash loop: GpuArmed is set before the automatic send and cleared after three minutes or on a
+        // clean exit. Still set at the next start means Windows went down soon after the last one, so this start sends
+        // nothing and says so; Apply in the panel sends it by hand, and the start after this one is automatic again.
+        if (getDword(L"GpuArmed", 0)) {
+            setDword(L"GpuArmed", 0);
+            gpuState = -3, lstrcpyW(gpuNote, L"Held back after an unclean shutdown");
+        } else {
+            setDword(L"GpuArmed", 1);
+            SetTimer(hwnd, TIMER_GPU, 10000, NULL);
+            SetTimer(hwnd, TIMER_ARMED, 180000, NULL);
+        }
+    }
     hasRgb = hasOpenRgb || hasRam || linkLeds;
     if (hasRgb || hasFans || ddcIds[0]) displayNotify = RegisterPowerSettingNotification(hwnd, &GUID_CONSOLE_DISPLAY_STATE, DEVICE_NOTIFY_WINDOW_HANDLE);
     trim();
