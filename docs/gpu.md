@@ -88,7 +88,7 @@ One card (RTX 5090 FE, driver 621.24, water cooled), Time Spy Extreme graphics t
 | Flat 2,400 | 139.4 | 367 | 21.2 % slower, 42 % less |
 
 - The first two rows are 5 runs each, alternated run by run; their ranges do not overlap. The rest are 2 runs each: screening, not validation.
-- The knee is at 3,000 to 3,090 MHz. Above it, 1 % of performance buys 5 to 7 % of power. Below it the trade is roughly one for one.
+- The knee is at 3,000 to 3,090 MHz. Above it, giving up 1 % of performance saves 5 to 8 % of power. Below it, about 1.5 %.
 - With a raised top, heavy loads climb in voltage and peaked at 620 to 668 W on a connector rated for 600 W. The flat 3,090 curve stayed at or under 595 W.
 - A lower cap is not an undervolt: the cap does not set the voltage the card settles at (it read between 0.91 and 0.99 V from step to step).
 
