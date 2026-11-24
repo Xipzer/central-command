@@ -27,7 +27,7 @@ Run one or the other, not both: each would switch the screens and the lighting. 
 
 ## What it does
 
-**Screens and lights.** Left-click the tray icon and every screen turns off. Lighting, fans, monitor power and window positions follow the screens, for a click and for Windows' own display timeout:
+**Screens and lights.** Left-click the tray icon and every screen turns off. Clicked by mistake? Click again before the screens go dark and it is cancelled. Lighting, fans, monitor power and window positions follow the screens, for a click and for Windows' own display timeout:
 
 | Screens off | Screens on |
 |---|---|
@@ -44,7 +44,7 @@ Run one or the other, not both: each would switch the screens and the lighting. 
 
 - **Main:** Screens off, RGB lighting, RGB off with the screens. With a fan curve: the temperature, fan speed, a 15 minute graph, RPM per fan, the switch that makes the fans follow the temperature and the override at a fixed speed. With GPU profiles: the profile on the card, a dot that is green when the driver took it, and the XBAR offset.
 - **Settings > Fans:** the fan curve (drag a point, double-click to add one, right-click to remove one), max fan speed, how much cooler it must get before the fans slow down, reset.
-- **Settings > Wake:** which inputs may wake the screens, and what woke them last, with the device behind it.
+- **Settings > Wake:** which inputs may wake the screens, **Screens off when locked**, and what woke them last, with the device behind it.
 - **Settings > GPU:** overclock profiles for an NVIDIA card: the clock curve as a chart, power limit, memory offset, XBAR offset.
 - **Settings > System:** Start with Windows, Exit, and what Central Command found on this PC, with its version.
 
@@ -236,6 +236,7 @@ Things we hit running it every day on a water-cooled desktop (ASRock Z790 board 
 | The legacy monitor-off broadcast | A monitor on the motherboard's iGPU came straight back; some iGPU DisplayPort outputs stayed half awake ("No Signal" flashes) | Central Command sets the display timeout to 1 s instead; list such monitors in `[ddc] monitors=` so they are powered off over DDC/CI. Best: run every monitor from the graphics card |
 | Kingston FURY RGB not seen by OpenRGB | RAM stays lit | Use the FURY module. Keep Kingston FURY CTRL installed: it is also what blanks the DIMM lighting on sleep |
 | A bumped mouse wakes the screens at night | | Settings > Wake: **Wake the screens only with** a left-click or Esc |
+| A bumped mouse wakes the locked screen | The lock screen is Windows' secure desktop, which the wake rules cannot watch | Settings > Wake: **Screens off when locked**. Locking turns the screens off, and a woken lock screen goes back off after 10 s without input |
 | Run key and logon task both present | Whichever starts first holds the single-instance lock. If that is the non-admin Run-key copy, there is no fan control | Use one: as admin, **Start with Windows** makes the logon task |
 | Blackout and Central Command both running | Screens and lighting are switched twice | Run one of them |
 | A GPU driver reset | The profile, the XBAR offset and a clock cap set with `nvidia-smi -lgc` are gone | The profile and XBAR are sent again 15 s after the reset; the `[gpu]` cap is re-sent every minute |

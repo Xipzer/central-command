@@ -14,5 +14,5 @@ python3 tools/make_icon.py build/central-command-light.ico dark
 cp src/central-command.rc build/
 "$ZIG" cc -target x86_64-windows-gnu -Os -s -municode -Wl,--subsystem,windows \
   src/main.c build/central-command.rc -o build/central-command.exe \
-  -lkernel32 -luser32 -lshell32 -ladvapi32 -lsetupapi -lhid -lpowrprof -ldxva2 -ldwmapi -lgdi32
+  -lkernel32 -luser32 -lshell32 -ladvapi32 -lsetupapi -lhid -lpowrprof -lwtsapi32 -ldxva2 -ldwmapi -lgdi32
 ls -l build/central-command.exe

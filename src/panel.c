@@ -41,7 +41,7 @@
 
 enum {
     H_NONE, H_SCREENS, H_GEAR, H_BACK, H_TAB_FANS, H_TAB_WAKE, H_TAB_SYSTEM, H_RGB, H_SYNC, H_CURVE, H_START, H_EXIT,
-    H_MAX_DN, H_MAX_UP, H_HYS_DN, H_HYS_UP, H_RESET, H_HOTKEY, H_WAKE_CLICK, H_WAKE_ESC, H_NOTICE, H_OVR_DN, H_OVR_UP, H_OVR,
+    H_MAX_DN, H_MAX_UP, H_HYS_DN, H_HYS_UP, H_RESET, H_HOTKEY, H_WAKE_CLICK, H_WAKE_ESC, H_LOCK, H_NOTICE, H_OVR_DN, H_OVR_UP, H_OVR,
     H_TAB_GPU, H_PROF1, H_PROF2, H_PROF3, H_PROF4, H_PROF5, H_XBAR_DN, H_XBAR_UP, H_GPU_APPLY, H_GPU_KEEP, H_GPU, H_GPU_NAME, H_COUNT
 };
 enum { F_BRAND, F_ROW, F_SMALL, F_BIG, F_UNIT, F_BOLD, F_TINY, F_COUNT };
@@ -679,7 +679,10 @@ static void paintWake(float x, float y, float w) {
     divider(x, y + 3 * ROW, w);
     text(L"Ctrl+Alt+Del", F_ROW, rc(ix + 16, y + 3 * ROW + 10, iw - 100, 22), ink(), hk ? 1 : 0.4f, DWRITE_TEXT_ALIGNMENT_LEADING);
     text(L"always", F_SMALL, rc(ix + iw - 80, y + 3 * ROW + 11, 80, 18), dim(), hk ? 1 : 0.4f, DWRITE_TEXT_ALIGNMENT_TRAILING);
-    y += 4 * ROW + SECT;
+    y += 4 * ROW + GAP;
+    card(x, y, w, ROW);
+    toggleRow(L"Screens off when locked", x, y, w, 0, H_LOCK, pref(L"LockOff", 0), TRUE);
+    y += ROW + SECT;
 
     section(L"WHAT WOKE THE SCREENS", x, &y, w);
     float h = panelH - PAD - y;
@@ -1244,7 +1247,7 @@ static void panelClick(int id) {
     case H_NONE: return;
     case H_SCREENS:
         DestroyWindow(panel);
-        if (!panelTest) SetTimer(panelOwner, TIMER_OFF, 400, NULL);
+        if (!panelTest) offRequest(panelOwner);
         return;
     case H_GEAR: panelGo(settingsTab); return;
     case H_NOTICE: panelGo(V_FANS); return;
@@ -1315,6 +1318,7 @@ static void panelClick(int id) {
         else toggleStartup();
         break;
     case H_HOTKEY: setPref(L"HotkeyMode", !pref(L"HotkeyMode", 0)); break;
+    case H_LOCK: setPref(L"LockOff", !pref(L"LockOff", 0)); break;
     case H_WAKE_CLICK:
     case H_WAKE_ESC: {
         LPCWSTR key = id == H_WAKE_CLICK ? L"WakeClick" : L"WakeEsc", other = id == H_WAKE_CLICK ? L"WakeEsc" : L"WakeClick";

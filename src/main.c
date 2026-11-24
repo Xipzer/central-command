@@ -10,6 +10,7 @@
 #include <hidsdi.h>
 #include <hidpi.h>
 #include <powrprof.h>
+#include <wtsapi32.h>
 #include <physicalmonitorenumerationapi.h>
 #include <lowlevelmonitorconfigurationapi.h>
 
@@ -24,6 +25,7 @@
 #define ID_DEVICES   9
 #define ID_OVERRIDE  10
 #define ID_GPU_APPLY 11
+#define ID_LOCK      12
 #define ID_XBAR      1000
 #define ID_FAN_AWAKE 100
 #define ID_FAN_SLEEP 200
@@ -1129,6 +1131,26 @@ static void setIdleTimeout(DWORD seconds) {
     LocalFree(scheme);
 }
 
+// "Screens off when locked" (HKCU LockOff): locking turns the screens off, and while the PC stays locked Windows' own
+// lock screen timeout is cut to LOCK_SECONDS, so a screen woken on the lock screen goes back off by itself unless
+// someone is using it. The wake rules can't apply there: the lock screen is Windows' secure desktop, which the hooks
+// can't see. The timeout is put back on unlock.
+#define LOCK_SECONDS 10
+static const GUID lockTimeoutId = {0x8ec4b3a5, 0x6868, 0x48c2, {0xbe, 0x75, 0x4f, 0x30, 0x44, 0xbe, 0x88, 0xa7}}; // VIDEOCONLOCK
+static DWORD lockRestore = (DWORD)-1;
+
+static void lockTimeout(BOOL shorten) {
+    GUID *scheme;
+    if ((lockRestore != (DWORD)-1) == shorten || PowerGetActiveScheme(NULL, &scheme) != ERROR_SUCCESS) return;
+    if (shorten && PowerReadACValueIndex(NULL, scheme, &GUID_VIDEO_SUBGROUP, &lockTimeoutId, &lockRestore) != ERROR_SUCCESS) lockRestore = (DWORD)-1;
+    else if (shorten || lockRestore != (DWORD)-1) {
+        PowerWriteACValueIndex(NULL, scheme, &GUID_VIDEO_SUBGROUP, &lockTimeoutId, shorten ? LOCK_SECONDS : lockRestore);
+        PowerSetActiveScheme(NULL, scheme);
+        if (!shorten) lockRestore = (DWORD)-1;
+    }
+    LocalFree(scheme);
+}
+
 static void screensOff(HWND hwnd) {
     GUID *scheme;
     DWORD current;
@@ -1142,6 +1164,25 @@ static void screensOff(HWND hwnd) {
         LocalFree(scheme);
     }
     SetTimer(hwnd, TIMER_IDLE, 6000, NULL);
+}
+
+// A screens-off click can be taken back: a second click (or a double-click) before the screens have gone off
+// cancels it and puts everything back, instead of blacking out and then having to wake the screens again.
+static BOOL offArmed, offStarted;
+static void restoreIdle(void);
+
+static void offRequest(HWND hwnd) {
+    if (!offArmed) {
+        offArmed = TRUE, offStarted = FALSE;
+        // Short delay so the click release doesn't wake the screens straight back up.
+        SetTimer(hwnd, TIMER_OFF, 400, NULL);
+        return;
+    }
+    KillTimer(hwnd, TIMER_OFF);
+    KillTimer(hwnd, TIMER_IDLE);
+    restoreIdle();
+    if (offStarted) ddcPower(TRUE);
+    offArmed = offStarted = FALSE;
 }
 
 static void restoreIdle(void) {
@@ -1275,6 +1316,7 @@ static void showMenu(HWND hwnd) {
         AppendMenuW(menu, MF_POPUP, (UINT_PTR)gpu, L"GPU");
     }
     AppendMenuW(menu, MF_SEPARATOR, 0, NULL);
+    AppendMenuW(menu, MF_STRING | (getDword(L"LockOff", 0) ? MF_CHECKED : 0), ID_LOCK, L"Screens off when locked");
     AppendMenuW(menu, MF_STRING | (startupEnabled() ? MF_CHECKED : 0), ID_STARTUP, L"Start with Windows");
     AppendMenuW(menu, MF_STRING, ID_EXIT, L"Exit");
     POINT pt;
@@ -1400,8 +1442,8 @@ static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         switch (LOWORD(lp)) {
         case NIN_SELECT:
         case NIN_KEYSELECT:
-            // Short delay so the click release doesn't wake the screens straight back up.
-            SetTimer(hwnd, TIMER_OFF, 400, NULL);
+        case WM_LBUTTONDBLCLK:
+            offRequest(hwnd);
             return 0;
         case WM_CONTEXTMENU:
             if (!panelShow(hwnd)) showMenu(hwnd);
@@ -1438,9 +1480,11 @@ static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             restoreTopology();
             restoreWindows();
         } else if (wp == TIMER_OFF) {
+            offStarted = TRUE;
             screensOff(hwnd);
         } else if (wp == TIMER_IDLE) {
             // Idle path didn't take (e.g. something is holding the display on): fall back to the legacy message.
+            offArmed = FALSE;
             restoreIdle();
             if (screensOn) DefWindowProcW(hwnd, WM_SYSCOMMAND, SC_MONITORPOWER, 2);
         } else {
@@ -1481,7 +1525,7 @@ static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     }
     case WM_COMMAND:
         switch (LOWORD(wp)) {
-        case ID_SCREENS: SetTimer(hwnd, TIMER_OFF, 400, NULL); return 0;
+        case ID_SCREENS: offRequest(hwnd); return 0;
         case ID_RGB: rgbToggle(hwnd); return 0;
         case ID_SYNC: setDword(L"Sync", !getDword(L"Sync", 1)); return 0;
         case ID_FANCTL: setDword(L"FanCtl", !getDword(L"FanCtl", 1)); applyFans(); return 0;
@@ -1507,6 +1551,7 @@ static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             return 0;
         }
         case ID_STARTUP: toggleStartup(); return 0;
+        case ID_LOCK: setDword(L"LockOff", !getDword(L"LockOff", 0)); return 0;
         case ID_EXIT: DestroyWindow(hwnd); return 0;
         case ID_GPU_APPLY: SetTimer(hwnd, TIMER_GPU, 100, NULL); return 0;
         }
@@ -1532,6 +1577,7 @@ static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                 DWORD state = *(DWORD *)ps->Data;
                 if (state != 2) {
                     if (state == 0) {
+                        offArmed = FALSE;
                         KillTimer(hwnd, TIMER_IDLE);
                         restoreIdle();
                     }
@@ -1560,6 +1606,14 @@ static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     case WM_SETTINGCHANGE:
         if (lp && !lstrcmpW((LPCWSTR)lp, L"ImmersiveColorSet")) trayIcon();
         return 0;
+    case WM_WTSSESSION_CHANGE:
+        if (wp == WTS_SESSION_LOCK && getDword(L"LockOff", 0)) {
+            lockTimeout(TRUE);
+            SetTimer(hwnd, TIMER_OFF, 400, NULL);
+        } else if (wp == WTS_SESSION_UNLOCK) {
+            lockTimeout(FALSE);
+        }
+        return 0;
     case WM_DISPLAYCHANGE:
         // Monitors re-enumerate a few seconds after waking; restore once they have settled.
         if (screensOn && savedCount) SetTimer(hwnd, TIMER_LAYOUT, 2500, NULL);
@@ -1582,6 +1636,8 @@ static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         setDword(L"GpuArmed", 0);
         hotkeyDisarm();
         restoreIdle();
+        lockTimeout(FALSE);
+        WTSUnRegisterSessionNotification(hwnd);
         fansRelease();
         if (link != INVALID_HANDLE_VALUE) {
             static const BYTE hardMode[] = {0x01, 0x03, 0x00, 0x01};
@@ -1666,6 +1722,7 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE hp, LPWSTR cmd, int show) {
         }
     }
     hasRgb = hasOpenRgb || hasRam || linkLeds;
+    WTSRegisterSessionNotification(hwnd, NOTIFY_FOR_THIS_SESSION);
     if (hasRgb || hasFans || ddcIds[0]) displayNotify = RegisterPowerSettingNotification(hwnd, &GUID_CONSOLE_DISPLAY_STATE, DEVICE_NOTIFY_WINDOW_HANDLE);
     trim();
 
